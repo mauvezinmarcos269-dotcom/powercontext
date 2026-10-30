@@ -16,7 +16,9 @@
 
 import asyncio
 import json
+from typing import Any
 
+import pytest
 from pydantic import SecretStr
 
 from powercontext.builtin.inference.privacy import InferenceProtectionConfig, UpstreamProfile
@@ -294,5 +296,81 @@ def test_public_check_rejects_missing_bindings_and_blocks_without_reflecting_sec
                 rejected = await client.post("/v1/context/check", json=invalid)
                 assert rejected.status_code == 422
                 assert "synthetic-sensitive" not in rejected.text
+
+    asyncio.run(scenario())
+
+
+@pytest.mark.parametrize("protocol", ["openai-chat", "openai-responses", "anthropic-messages"])
+@pytest.mark.parametrize("assembled", [False, True], ids=["context-marker", "text-marker"])
+def test_public_check_rejects_stale_context_markers_split_between_native_blocks(tmp_path, protocol, assembled):
+    async def scenario():
+        inference = _inference()
+        target = inference.protection.targets["model"].model_copy(
+            update={"protocol": protocol, "require_prepared_contexts": True}
+        )
+        inference = inference.model_copy(
+            update={"protection": inference.protection.model_copy(update={"targets": {"model": target}})}
+        )
+        async with _server(tmp_path, inference=inference) as (_, client, _):
+            scope_id = await _scope(client)
+            record = await _remember(client, scope_id, "Alpha deployment uses port 8123.")
+            prepare: dict[str, Any] = {"scope_id": scope_id, "query": "alpha", "include_reuse": True}
+            if assembled:
+                prepare["assembly"] = {"sections": [{"family": "memory", "limit": 8}]}
+            old = await client.post("/v1/context/prepare", json=prepare)
+            assert old.status_code == 200, old.text
+            retained = old.json()
+            await _change(client, scope_id, record, "revise")
+            fresh = await client.post("/v1/context/prepare", json=prepare)
+            assert fresh.status_code == 200, fresh.text
+            current = fresh.json()
+            collection = "input" if protocol == "openai-responses" else "messages"
+            text_type = "input_text" if protocol == "openai-responses" else "text"
+
+            async def check(envelope, extra=()):
+                content = envelope["context"]["content"]
+                body: dict[str, Any] = {
+                    "model": "test",
+                    collection: [
+                        {
+                            "role": "user",
+                            "content": [
+                                {"type": text_type, "text": "Continue using this history:\n"},
+                                {"type": text_type, "text": content},
+                                {"type": text_type, "text": "\nAnswer the current task."},
+                            ],
+                        }
+                    ],
+                }
+                if protocol == "openai-responses":
+                    body.update(max_output_tokens=64, store=False)
+                else:
+                    body["max_tokens"] = 64
+                if extra:
+                    if protocol == "anthropic-messages":
+                        body["system"] = extra
+                    else:
+                        body[collection].append({"role": "system", "content": extra})
+                request = _send(scope_id, content, envelope["reuse"]["binding"])
+                request["payload"]["body"] = json.dumps(body)
+                request["prepared_contexts"][0]["location"]["pointer"] = f"/{collection}/0/content/1/text"
+                return await client.post("/v1/context/check", json=request)
+
+            stale = await check(retained)
+            assert stale.status_code == 200 and stale.json()["decision"] == "withhold", stale.text
+            assert stale.json()["reason_codes"] == ["context-refresh-required"]
+            allowed = await check(current)
+            assert allowed.status_code == 200 and allowed.json()["decision"] == "allow", allowed.text
+            text = retained["context"]["content"]
+            whole = await check(current, [{"type": text_type, "text": text}])
+            assert whole.status_code == 422, whole.text
+            boundary = text.index("BEGIN_POWERCONTEXT_") + len("BEGIN_PO")
+            for chunks in (
+                (text[:boundary], text[boundary:]),
+                (text[:boundary], "", text[boundary : boundary + 1], text[boundary + 1 :]),
+            ):
+                split = await check(current, [{"type": text_type, "text": chunk} for chunk in chunks])
+                assert split.status_code == 422, split.json().get("decision")
+                assert split.json()["error"]["code"] == "invalid_request"
 
     asyncio.run(scenario())

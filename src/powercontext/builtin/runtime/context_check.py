@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import json
 import re
-from collections.abc import Awaitable, Callable, Mapping
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from datetime import UTC, datetime, timedelta
 from hashlib import sha256
 from typing import Annotated, Literal, TypeAlias
@@ -209,6 +209,27 @@ def _located_bytes(text: str, location: ModelJsonTextLocation) -> bytes:
     return content[start:end]
 
 
+def _require_unsplit_markers(parts: Sequence[object]) -> None:
+    # A locator covers one JSON string. A marker crossing native text blocks
+    # cannot be covered by any supported locator, including in system content.
+    overlap = max(map(len, _MARKERS)) - 1
+    tail = ""
+    for part in parts:
+        text = part if isinstance(part, str) else None
+        if isinstance(part, dict) and part.get("type") in ("text", "input_text", "output_text"):
+            text = part.get("text")
+        if not isinstance(text, str):
+            tail = ""
+            continue
+        boundary = len(tail)
+        joined = tail + text[:overlap]
+        for marker in _MARKERS:
+            start = joined.find(marker, max(0, boundary - len(marker) + 1))
+            if 0 <= start < boundary:
+                raise InvalidRuntimeRequestError("context-binding-required")
+        tail = (tail + text[-overlap:])[-overlap:]
+
+
 def _require_bound_markers(value: object, locations: Mapping[str, list[tuple[int, int]]], pointer: str = "") -> None:
     if isinstance(value, dict):
         for key, child in value.items():
@@ -217,6 +238,7 @@ def _require_bound_markers(value: object, locations: Mapping[str, list[tuple[int
             escaped = key.replace("~", "~0").replace("/", "~1")
             _require_bound_markers(child, locations, f"{pointer}/{escaped}")
     elif isinstance(value, list):
+        _require_unsplit_markers(value)
         for index, child in enumerate(value):
             _require_bound_markers(child, locations, f"{pointer}/{index}")
     elif isinstance(value, str):
