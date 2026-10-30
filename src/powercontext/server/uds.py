@@ -27,7 +27,24 @@ import sys
 from collections.abc import Iterator
 from contextlib import ExitStack, contextmanager
 from pathlib import Path
-from typing import TextIO
+from typing import TYPE_CHECKING, Literal, TextIO
+
+if TYPE_CHECKING:
+    from starlette.types import ASGIApp, Receive, Scope, Send
+
+
+class UnixSocketExternalScheme:
+    """Apply an operator-declared proxy scheme without trusting forwarded peer headers."""
+
+    def __init__(self, app: ASGIApp, scheme: Literal["http", "https"]) -> None:
+        self.app = app
+        self.scheme = scheme
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] in {"http", "websocket"}:
+            scheme = self.scheme if scope["type"] == "http" else {"http": "ws", "https": "wss"}[self.scheme]
+            scope = {**scope, "scheme": scheme}
+        await self.app(scope, receive, send)
 
 
 class UnixSocketError(ValueError):
@@ -153,4 +170,4 @@ def unix_socket_listener(path: Path) -> Iterator[socket.socket]:
         yield listener
 
 
-__all__ = ["UnixSocketError", "unix_socket_listener", "validate_socket_path"]
+__all__ = ["UnixSocketError", "UnixSocketExternalScheme", "unix_socket_listener", "validate_socket_path"]

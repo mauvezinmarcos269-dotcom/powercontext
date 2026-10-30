@@ -134,6 +134,14 @@ Explicit `--host` or `--port` options are rejected when combined with an effecti
 existing TCP behavior applies. UDS supports the `all` and `api` roles; `api` still requires OceanBase. The `background`
 role rejects UDS because its infrastructure listener uses TCP.
 
+When a trusted same-user proxy terminates HTTPS and is the sole external entry to this private socket, set
+`POWERCONTEXT_SERVER_HTTP_UDS_EXTERNAL_SCHEME=https` and preserve the browser-facing `Host` header. This fixed
+operator declaration makes Dashboard Origin validation use HTTPS and issue Secure cookies. It applies to **every**
+request on the socket, so do not use it for a proxy that also forwards plaintext external traffic. Unset it for direct
+HTTP-over-UDS access. Only `http` and `https` are accepted; setting it without `HTTP_UDS` is rejected.
+The Server still ignores `X-Forwarded-Proto` and `X-Forwarded-For`, even with `FORWARDED_ALLOW_IPS=*`, and does not
+replace the native UDS peer with a loopback identity. `PUBLIC_URL` advertises an endpoint; it does not grant scheme trust.
+
 Choose a short, private run directory:
 
 - The socket path must be absolute, contain neither `..` nor NUL, and occupy at most 103 bytes in the filesystem

@@ -18,15 +18,19 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import signal
 import socket
+import ssl
 import stat
 import subprocess
 import sys
 import time
 from collections.abc import Iterator
 from contextlib import contextmanager
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from threading import Thread
 from typing import Any
 
 import httpx
@@ -267,3 +271,106 @@ def test_cli_uds_startup_failure_releases_socket(tmp_path, short_tmp_path):
     assert "Application startup failed" in result.stdout + result.stderr
     assert not socket_path.exists()
     assert invalid_database.is_dir()
+
+
+@contextmanager
+def _https_proxy(directory: Path, socket_path: Path) -> Iterator[tuple[str, ssl.SSLContext]]:
+    """Terminate real TLS and relay HTTP to the private socket with the public Host."""
+    openssl = shutil.which("openssl")
+    if openssl is None:
+        pytest.skip("openssl is required to generate the disposable TLS proxy certificate")
+    certificate, key = directory / "proxy.crt", directory / "proxy.key"
+    subprocess.run(
+        [
+            openssl,
+            "req",
+            "-x509",
+            "-newkey",
+            "rsa:2048",
+            "-nodes",
+            "-days",
+            "1",
+            "-subj",
+            "/CN=127.0.0.1",
+            "-addext",
+            "subjectAltName=IP:127.0.0.1",
+            "-keyout",
+            str(key),
+            "-out",
+            str(certificate),
+        ],
+        check=True,
+        capture_output=True,
+        timeout=15,
+    )
+    tls = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    tls.load_cert_chain(certificate, key)
+    with httpx.Client(transport=httpx.HTTPTransport(uds=str(socket_path)), trust_env=False, timeout=5) as upstream:
+
+        class Proxy(BaseHTTPRequestHandler):
+            def do_POST(self) -> None:
+                response = upstream.post(
+                    f"http://localhost{self.path}",
+                    content=self.rfile.read(int(self.headers.get("Content-Length", "0"))),
+                    headers={**dict(self.headers), "X-Forwarded-Proto": "https", "X-Forwarded-For": "127.0.0.1"},
+                )
+                self.send_response(response.status_code)
+                for name, value in response.headers.multi_items():
+                    self.send_header(name, value)
+                self.end_headers()
+                self.wfile.write(response.content)
+
+            def log_message(self, format: str, *args: Any) -> None:  # noqa: A002 - match the stdlib signature.
+                pass
+
+        with ThreadingHTTPServer(("127.0.0.1", 0), Proxy) as proxy:
+            proxy.socket = tls.wrap_socket(proxy.socket, server_side=True)
+            thread = Thread(target=proxy.serve_forever, daemon=True)
+            thread.start()
+            try:
+                yield f"https://127.0.0.1:{proxy.server_port}", ssl.create_default_context(cafile=certificate)
+            finally:
+                proxy.shutdown()
+                thread.join(timeout=5)
+
+
+@pytest.mark.parametrize("external_scheme", [None, "https"])
+def test_dashboard_login_through_https_uds_proxy(tmp_path, short_tmp_path, external_scheme):
+    socket_path = short_tmp_path / "proxy.sock"
+    environment = _environment(tmp_path)
+    environment["POWERCONTEXT_SERVER_DASHBOARD_ENABLED"] = "true"
+    environment["FORWARDED_ALLOW_IPS"] = "*"
+    if external_scheme is not None:
+        environment["POWERCONTEXT_SERVER_HTTP_UDS_EXTERNAL_SCHEME"] = external_scheme
+    with _running_server(tmp_path, socket_path, environment) as (process, direct):
+        with _https_proxy(tmp_path, socket_path) as (url, tls), httpx.Client(verify=tls, trust_env=False) as browser:
+            response = browser.post(f"{url}/dashboard/session", headers={"Origin": url}, data={"token": _TOKEN})
+            if external_scheme is None:
+                assert response.status_code == 403
+                assert "set-cookie" not in response.headers
+                # Neither wildcard forwarding nor claimed loopback/HTTPS headers grants trust.
+                response = direct.post(
+                    "/dashboard/session", headers={"Origin": "http://localhost"}, data={"token": _TOKEN}
+                )
+                assert response.status_code == 303
+                assert "Secure" not in response.headers["set-cookie"]
+                receiver = direct.post(
+                    "/v1/skill/remote/target/enroll",
+                    headers={"X-Forwarded-Proto": "https", "X-Forwarded-For": "127.0.0.1"},
+                    json={"enrollment_code": "x" * 32, "installation_id": "uds-test", "receiver_version": "1"},
+                )
+                assert receiver.status_code == 422
+                assert receiver.json()["error"]["code"] == "invalid_request"
+            else:
+                assert response.status_code == 303
+                cookie = response.headers["set-cookie"]
+                assert "Secure" in cookie and "HttpOnly" in cookie and "SameSite=strict" in cookie
+                for origin in (url.replace("https:", "http:"), "https://other.example"):
+                    rejected = browser.post(
+                        f"{url}/dashboard/session", headers={"Origin": origin}, data={"token": _TOKEN}
+                    )
+                    assert rejected.status_code == 403
+                    assert "set-cookie" not in rejected.headers
+        process.terminate()
+        process.wait(timeout=15)
+    assert not socket_path.exists()

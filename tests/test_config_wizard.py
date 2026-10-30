@@ -15,6 +15,7 @@
 """User-visible file generation flows for the bilingual configuration wizard."""
 
 import json
+import shlex
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -37,10 +38,13 @@ def available_listener(monkeypatch) -> None:
     monkeypatch.setattr(config_wizard, "_listener_port_available", lambda host, port: True)
 
 
-@pytest.mark.parametrize("setting", ["POWERCONTEXT_SERVER_HTTP_UDS", "powercontext_server_http_uds"])
+@pytest.mark.parametrize(
+    "setting", ["POWERCONTEXT_SERVER_HTTP_UDS", "powercontext_server_http_uds", "POWERCONTEXT_SERVER_HTTP"]
+)
 def test_wizard_rejects_uds_configuration_before_prompts_or_writes(tmp_path: Path, setting: str) -> None:
     output = tmp_path / "server.env"
-    content = f"{setting}=/run/powercontext/core.sock\nPOWERCONTEXT_SERVER_HTTP_PORT=18000\n"
+    value = '{"uds":"/run/powercontext/core.sock"}' if setting.endswith("HTTP") else "/run/powercontext/core.sock"
+    content = f"{setting}={shlex.quote(value)}\nPOWERCONTEXT_SERVER_HTTP_PORT=18000\n"
     output.write_text(content, encoding="utf-8")
 
     result = CliRunner().invoke(app, ["init", "--output", str(output)], input="")

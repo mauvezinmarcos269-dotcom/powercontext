@@ -102,6 +102,7 @@ MCP 使用 stateless Streamable HTTP，每次工具执行都采用当前请求�
 | `POWERCONTEXT_SERVER_HTTP_HOST` | `127.0.0.1` | TCP 监听地址；设置 `HTTP_UDS` 时忽略 |
 | `POWERCONTEXT_SERVER_HTTP_PORT` | `8000` | TCP 监听端口；设置 `HTTP_UDS` 时忽略；配置向导在首次设置时建议使用 `17429` |
 | `POWERCONTEXT_SERVER_HTTP_UDS` | 未设置 | Linux/macOS 上 `server run` 的 HTTP Unix socket 路径；仅监听 UDS，不创建 TCP listener；必须是绝对路径，不含 `..` 或 NUL，按文件系统编码计算不超过 103 字节 |
+| `POWERCONTEXT_SERVER_HTTP_UDS_EXTERNAL_SCHEME` | 未设置 | 私有 UDS 上可信代理的外部协议，只接受 `http` 或 `https`，必须同时设置 `HTTP_UDS`；仅在可信代理终止 TLS 时设置 `https`。仍忽略转发的协议与客户端 IP header |
 | `POWERCONTEXT_SERVER_HTTP_MAX_REQUEST_BODY_BYTES` | `16777216` | 解析前允许的外部 HTTP 请求体字节数，包括分块上传 |
 | `POWERCONTEXT_SERVER_HTTP_MAX_CONCURRENT_REQUESTS` | `64` | 每进程进行中的外部 HTTP 请求上限，包括完整流式响应 |
 | `POWERCONTEXT_SERVER_WORKSPACE` | Server 启动目录 | 本机项目级 Agent Skill 目录的解析根目录 |
@@ -277,8 +278,12 @@ PowerContext 用户数据目录创建密钥。内存 SQLite 使用进程内密�
 `POWERCONTEXT_SERVER_CURSOR_SIGNING_SECRET`，这样重启或下一请求落到其他副本后，已签发 cursor 仍然有效。
 在已签发 cursor 仍需有效期间，不要泄漏或轮换该值。
 
-设置 `HttpConfig.uds`、`POWERCONTEXT_SERVER_HTTP_UDS` 或 `server run --uds /absolute/path/core.sock` 可以选择 UDS，
-其中 CLI 参数优先；有效配置已选择 UDS 时，显式传入 `--host` 或 `--port` 会被拒绝。UDS 支持 `all` 和 `api` role
+设置 `HttpConfig.uds`、`POWERCONTEXT_SERVER_HTTP_UDS` 或 `server run --uds /absolute/path/core.sock` 可以选择 UDS。
+也支持 JSON 形式 `POWERCONTEXT_SERVER_HTTP='{"uds":"/absolute/private/core.sock"}'`。同一来源中，
+扁平的 `HTTP_UDS` 优先于 JSON；`server run` 和 Agent 接入采用的进程 HTTP 配置优先于环境文件。
+向导和模板会拒绝待编辑文件或进程有效配置中的 UDS，
+Agent 接入不会为 UDS listener 推断 TCP URL。
+CLI 参数优先于环境配置；有效配置已选择 UDS 时，显式传入 `--host` 或 `--port` 会被拒绝。UDS 支持 `all` 和 `api` role
 （后者仍要求 OceanBase），不支持 `background`。个人服务及本机 ops/Desktop 管理要求 TCP。目录 owner、权限、安全重启
 和鉴权客户端示例见[监听 Unix domain socket](deploy-server.md#监听-unix-domain-socket)。UDS 不会启用设计中的 Rust
 网关，也不会改变 API 授权规则。

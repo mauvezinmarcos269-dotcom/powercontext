@@ -117,6 +117,7 @@ class HttpConfig(BaseModel):
     host: str = "127.0.0.1"
     port: int = Field(default=8000, ge=1, le=65535)
     uds: Path | None = None
+    uds_external_scheme: Literal["http", "https"] | None = None
     max_request_body_bytes: int = Field(default=16 * 1024 * 1024, gt=0)
     max_concurrent_requests: int = Field(default=64, gt=0)
 
@@ -128,6 +129,12 @@ class HttpConfig(BaseModel):
         from powercontext.server.uds import validate_socket_path
 
         return validate_socket_path(value)
+
+    @model_validator(mode="after")
+    def require_uds_for_external_scheme(self) -> HttpConfig:
+        if self.uds_external_scheme is not None and self.uds is None:
+            raise ValueError("HTTP_UDS_EXTERNAL_SCHEME requires HTTP_UDS")  # noqa: TRY003
+        return self
 
 
 class McpConfig(BaseModel):

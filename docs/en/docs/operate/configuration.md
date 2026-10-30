@@ -115,6 +115,7 @@ still occupies an HTTP slot until it finishes; reserve other slots for concurren
 | `POWERCONTEXT_SERVER_HTTP_HOST` | `127.0.0.1` | TCP listener address; ignored when `HTTP_UDS` is set |
 | `POWERCONTEXT_SERVER_HTTP_PORT` | `8000` | TCP listener port; ignored when `HTTP_UDS` is set; the configuration wizard suggests `17429` for new setups |
 | `POWERCONTEXT_SERVER_HTTP_UDS` | unset | HTTP Unix socket path for `server run` on Linux/macOS; selects UDS only, with no TCP listener; absolute path, at most 103 filesystem-encoded bytes, without `..` or NUL |
+| `POWERCONTEXT_SERVER_HTTP_UDS_EXTERNAL_SCHEME` | unset | Operator-declared external `http` or `https` scheme for a trusted proxy on the private UDS; requires `HTTP_UDS`. Set `https` only with trusted TLS termination. Forwarded scheme and client-IP headers remain ignored |
 | `POWERCONTEXT_SERVER_HTTP_MAX_REQUEST_BODY_BYTES` | `16777216` | Maximum external HTTP body bytes before parsing, including chunked uploads |
 | `POWERCONTEXT_SERVER_HTTP_MAX_CONCURRENT_REQUESTS` | `64` | Per-process external HTTP requests in flight, including full streaming responses |
 | `POWERCONTEXT_SERVER_WORKSPACE` | Server startup directory | Resolution root for local project Agent Skill folders |
@@ -310,6 +311,10 @@ restart or when the next request reaches another replica. Never expose or rotate
 must remain valid.
 
 Set `HttpConfig.uds`, `POWERCONTEXT_SERVER_HTTP_UDS`, or `server run --uds /absolute/path/core.sock` to select UDS.
+The JSON form `POWERCONTEXT_SERVER_HTTP='{"uds":"/absolute/private/core.sock"}'` also selects UDS.
+Flat `HTTP_UDS` values override JSON within one source; for `server run` and Agent setup, process HTTP settings
+override environment-file settings. The wizard/template reject UDS in the edited file or effective process configuration,
+and Agent setup never infers a TCP URL from a UDS listener.
 The CLI option takes precedence; explicit `--host` or `--port` options conflict with an effective UDS setting. UDS is
 supported for roles `all` and `api` (the latter still requires OceanBase), and rejected for `background`. Personal
 services and local ops/Desktop management require TCP. See [Listen on a Unix domain socket](deploy-server.md#listen-on-a-unix-domain-socket)

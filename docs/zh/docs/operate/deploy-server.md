@@ -123,6 +123,13 @@ powercontext server run
 再显式传入 `--host` 或 `--port` 会被拒绝。未设置 UDS 时沿用 TCP 行为。UDS 支持 `all` 和 `api` role，
 其中 `api` 仍要求使用 OceanBase；`background` role 的 infrastructure listener 使用 TCP，因此拒绝 UDS 配置。
 
+仅当同用户运行的可信代理终止 HTTPS，且它是该私有 socket 的唯一外部入口时，设置
+`POWERCONTEXT_SERVER_HTTP_UDS_EXTERNAL_SCHEME=https`，并让代理保留浏览器所访问的 `Host` header。
+这一固定配置使 Dashboard 按 HTTPS 校验 Origin，并设置 Secure cookie。它作用于 socket 上的**每个**请求，
+因此代理同时转发外部明文 HTTP 时不得启用。直接使用 HTTP-over-UDS 时保持未设置。只接受 `http` 和 `https`，
+未设置 `HTTP_UDS` 时会拒绝该配置。即使设置 `FORWARDED_ALLOW_IPS=*`，Server 仍忽略 `X-Forwarded-Proto`
+和 `X-Forwarded-For`，不会把原生 UDS peer 替换为 loopback 身份。`PUBLIC_URL` 只声明访问地址，不建立协议信任。
+
 请选择较短的私有运行目录：
 
 - socket 路径必须是绝对路径，不含 `..` 或 NUL，按文件系统编码计算不超过 103 字节。

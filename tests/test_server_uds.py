@@ -29,7 +29,7 @@ from powercontext.builtin.persistence.oceanbase import OceanBaseConfig
 from powercontext.builtin.runtime.config import RuntimeConfig
 from powercontext.cli.app import create_cli
 from powercontext.server.cli import app
-from powercontext.server.configuration import server_settings_context
+from powercontext.server.configuration import resolve_http_configuration, server_settings_context
 from powercontext.server.settings import HttpConfig, ServerSettings
 from powercontext.server.uds import UnixSocketError, unix_socket_listener
 
@@ -141,4 +141,77 @@ def test_listener_cleanup_preserves_replacement_and_releases_lock(short_tmp_path
     assert not path.exists()
     with unix_socket_listener(path):
         assert path.is_socket()
+    assert not path.exists()
+
+
+@pytest.mark.parametrize("scheme", ["http", "https"])
+def test_external_scheme_requires_uds(scheme):
+    with pytest.raises(ValidationError, match="HTTP_UDS_EXTERNAL_SCHEME requires HTTP_UDS"):
+        HttpConfig(uds_external_scheme=scheme)
+
+
+@_UNIX
+@pytest.mark.parametrize("scheme", ["ftp", "HTTPS", ""])
+def test_invalid_uds_external_scheme_is_rejected(short_tmp_path, scheme):
+    with pytest.raises(ValidationError):
+        HttpConfig(uds=short_tmp_path / "core.sock", uds_external_scheme=scheme)
+
+
+@_UNIX
+@pytest.mark.parametrize(
+    ("document", "process", "expected_uds", "expected_port"),
+    [
+        (
+            {
+                "POWERCONTEXT_SERVER_HTTP": '{"uds":null,"port":8123}',
+                "powercontext_server_http_uds": "/run/private/core.sock",
+                "POWERCONTEXT_SERVER_HTTP_PORT": "8124",
+            },
+            {},
+            "/run/private/core.sock",
+            8124,
+        ),
+        (
+            {"POWERCONTEXT_SERVER_HTTP_UDS": "/run/private/core.sock", "POWERCONTEXT_SERVER_HTTP_PORT": "8123"},
+            {"POWERCONTEXT_SERVER_HTTP": '{"uds":null,"port":8124}'},
+            None,
+            8124,
+        ),
+        (
+            {"POWERCONTEXT_SERVER_HTTP": '{"uds":"/run/private/core.sock","port":8123}'},
+            {"POWERCONTEXT_SERVER_HTTP": '{"port":8124}'},
+            "/run/private/core.sock",
+            8124,
+        ),
+    ],
+)
+def test_http_detection_matches_server_source_precedence(
+    tmp_path, monkeypatch, document, process, expected_uds, expected_port
+):
+    import shlex
+
+    path = tmp_path / "server.env"
+    path.write_text("".join(f"{key}={shlex.quote(value)}\n" for key, value in document.items()))
+    for key, value in process.items():
+        monkeypatch.setenv(key, value)
+    listener = resolve_http_configuration(document, process)
+    with server_settings_context(env_file=path, process_environment_overrides=True) as settings:
+        assert listener == settings.http
+    assert listener.uds == (Path(expected_uds) if expected_uds else None)
+    assert listener.port == expected_port
+
+
+@_UNIX
+@pytest.mark.parametrize("started", [False, True])
+def test_cli_checks_started_when_uvicorn_returns_normally(short_tmp_path, monkeypatch, started):
+    """Older supported Uvicorn releases return normally after lifespan startup failure."""
+    import uvicorn
+
+    def returned_startup(server, sockets=None):
+        server.started = started
+
+    monkeypatch.setattr(uvicorn.Server, "run", returned_startup)
+    path = short_tmp_path / "startup.sock"
+    result = CliRunner().invoke(create_cli([app]), ["server", "run", "--no-env-file", "--uds", str(path)])
+    assert result.exit_code == (0 if started else 3), result.output
     assert not path.exists()

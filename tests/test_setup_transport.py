@@ -15,6 +15,7 @@
 """Setup consent must be explicit, endpoint-bound, and usable in a new session."""
 
 import json
+import shlex
 from unittest.mock import Mock
 
 import pytest
@@ -79,14 +80,16 @@ def test_explicit_remote_endpoint_overrides_file_and_local_port(tmp_path):
 
 @pytest.mark.parametrize("source", ["file", "process"])
 @pytest.mark.parametrize("port", [None, "18000"])
-def test_uds_server_has_no_implicit_agent_setup_endpoint(tmp_path, monkeypatch, source, port):
+@pytest.mark.parametrize("setting", ["POWERCONTEXT_SERVER_HTTP_UDS", "POWERCONTEXT_SERVER_HTTP"])
+def test_uds_server_has_no_implicit_agent_setup_endpoint(tmp_path, monkeypatch, source, port, setting):
     from powercontext.cli.transport import prepare_setup_transport
 
-    values = {"POWERCONTEXT_SERVER_HTTP_UDS": "/run/powercontext/core.sock"}
+    value = '{"uds":"/run/powercontext/core.sock"}' if setting.endswith("HTTP") else "/run/powercontext/core.sock"
+    values = {setting: value}
     if port is not None:
         values["POWERCONTEXT_SERVER_HTTP_PORT"] = port
     if source == "file":
-        (tmp_path / ".env").write_text("".join(f"{key}={value}\n" for key, value in values.items()))
+        (tmp_path / ".env").write_text("".join(f"{key}={shlex.quote(value)}\n" for key, value in values.items()))
     else:
         for key, value in values.items():
             monkeypatch.setenv(key.lower(), value)
@@ -532,3 +535,17 @@ def install_connection(monkeypatch):
             )
 
     return complete
+
+
+@pytest.mark.parametrize("flat_override", [False, True])
+def test_setup_json_listener_override_matches_server_precedence(tmp_path, monkeypatch, flat_override):
+    from powercontext.cli.transport import resolve_setup_endpoint
+
+    (tmp_path / ".env").write_text("POWERCONTEXT_SERVER_HTTP_UDS=/run/private/core.sock\n")
+    monkeypatch.setenv("POWERCONTEXT_SERVER_HTTP", '{"uds":null,"port":18123}')
+    if flat_override:
+        monkeypatch.setenv("POWERCONTEXT_SERVER_HTTP_UDS", "/run/private/other.sock")
+        with pytest.raises(ValueError, match="uses UDS and has no TCP endpoint"):
+            resolve_setup_endpoint("pi")
+    else:
+        assert resolve_setup_endpoint("pi") == "http://127.0.0.1:18123"

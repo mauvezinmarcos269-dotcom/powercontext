@@ -29,7 +29,7 @@ from typing_extensions import override
 
 from powercontext.cli.env_file import EnvironmentFileError, environment_context, read_environment_file
 from powercontext.paths import POWERCONTEXT_HOME_ENV
-from powercontext.server.settings import ServerSettings
+from powercontext.server.settings import HttpConfig, ServerSettings
 
 DEFAULT_SERVER_ENV_FILE = Path(".env")
 _SERVER_ENVIRONMENT_PREFIX = "POWERCONTEXT_SERVER_"
@@ -59,6 +59,29 @@ class _EnvironmentMappingSource(EnvSettingsSource):
     def __init__(self, settings_cls: type[BaseSettings], environment: Mapping[str, str]) -> None:
         super().__init__(settings_cls)
         self.env_vars = {name if self.case_sensitive else name.lower(): value for name, value in environment.items()}
+
+
+def resolve_http_configuration(*environments: Mapping[str, str]) -> HttpConfig:
+    """Resolve only HTTP settings, with later environment sources taking precedence.
+
+    Use the Server's source parser so JSON objects, case-insensitive names and flat
+    nested overrides behave identically, without requiring unrelated runtime settings.
+    """
+    values: dict[str, Any] = {}
+    field = ServerSettings.model_fields["http"]
+    try:
+        for environment in environments:
+            source = _EnvironmentMappingSource(ServerSettings, environment)
+            raw, _, complex_value = source.get_field_value(field, "http")
+            parsed = source.prepare_field_value("http", field, raw, complex_value)
+            if parsed is not None:
+                if not isinstance(parsed, dict):
+                    raise ValueError("HTTP settings must be an object")  # noqa: TRY003, TRY301
+                values.update(parsed)
+        return HttpConfig.model_validate(values)
+    except (ValueError, SettingsError) as error:
+        # Environment values may contain private paths; report the owning boundary only.
+        raise ServerConfigurationError(ValueError("Invalid Server HTTP configuration")) from error
 
 
 class _ServerSettingsWithEnvironmentFile(ServerSettings):
@@ -180,6 +203,7 @@ def server_settings_context(
 __all__ = [
     "DEFAULT_SERVER_ENV_FILE",
     "ServerConfigurationError",
+    "resolve_http_configuration",
     "resolve_server_environment_file",
     "server_settings_context",
 ]

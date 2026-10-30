@@ -779,13 +779,18 @@ def _run_configured_server(settings: ServerSettings) -> None:
                 application = create_server_app(settings=settings, tracing=tracing)
                 _run_server(application, host=settings.http.host, port=settings.http.port)
             else:
-                from powercontext.server.uds import UnixSocketError, unix_socket_listener
+                from powercontext.server.uds import UnixSocketError, UnixSocketExternalScheme, unix_socket_listener
 
                 try:
                     with ExitStack() as resources:
                         listener = resources.enter_context(unix_socket_listener(settings.http.uds))
                         application = create_server_app(settings=settings, tracing=tracing)
-                        _run_unix_server(application, listener=listener, cleanup=resources.close)
+                        uds_application = (
+                            UnixSocketExternalScheme(application, settings.http.uds_external_scheme)
+                            if settings.http.uds_external_scheme is not None
+                            else application
+                        )
+                        _run_unix_server(uds_application, listener=listener, cleanup=resources.close)
                 except UnixSocketError as error:
                     raise typer.BadParameter(str(error), param_hint="--uds / POWERCONTEXT_SERVER_HTTP_UDS") from error
         finally:
@@ -836,6 +841,8 @@ def _run_unix_server(application: Any, *, listener: socket, cleanup: Callable[[]
 
     server = UnixServer(uvicorn.Config(application, access_log=False, log_config=None, proxy_headers=False))
     server.run(sockets=[listener])
+    if not server.started:
+        raise typer.Exit(code=3)
 
 
 def _run_background(settings: ServerSettings, tracing: Any) -> None:
