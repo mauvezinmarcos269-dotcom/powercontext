@@ -74,19 +74,21 @@ Responses 默认会存储响应，参见提供方的[数据保留约定](https:/
 未展开的 `item_reference` 输入（包括省略 `type` 或将其设为 null 的引用）也会暂缓，因为无法检查其历史内容或把它计入窗口预算。
 请提供受支持的完整文本和工具输入，而不是提供方的历史条目引用。
 Anthropic 文档仅支持内联纯文本来源；PDF/base64、URL、Files API 引用和含图片的文档会暂缓。
+Responses 图片生成工具以及不透明的 `image_generation_call` 结果，在输入和输出边界都会暂缓。
 
 内置 OpenAI/Anthropic、Embedding、Rerank 路径把检查接在最终 HTTP transport，
 原生 SDK 的格式转换先完成。Enforcing 关闭 SDK 传输层自动重试；原有阶段的输出 schema 重试仍有界，
 每次实际发送都要检查。必需隐私错误会穿透 advisory 决策降级，不会变成空提取结果或已消费的 Memory HOLD。
 Memory 写入 gate 遇到这类拒绝时，flush 会在发布前失败，Source 窗口在重启后仍待处理；
 修正策略或模型输出后可重试。
+独立 Topic Memory worker 的每个生成阶段都继承同一部署策略；拒绝后不会发布或确认处理完成，Source 窗口继续待处理。
 无法控制最终传输边界的自定义推理对象，在 enforcing 模式下明确拒绝注入。
 
 ## 失败时的供应商用量
 
 供应商报告的输入、输出、缓存读取、缓存写入和推理 Token 计数与估算分开，缺失计数保持未知。响应被拒绝交付时仍可能产生费用；已知用量保留在异常中，并通过现有 Scope 用量记录器报告。缓存读取 Token 可能已包含在输入 Token 中，不能重复相加。
 
-本地流式支持限定为单 choice 的有界 OpenAI Chat SSE，需要显式配置 `allow_streaming=true`。交付前缓冲完整响应，拼接并检查文本、工具参数、`reasoning` 与 `reasoning_content`，包括跨事件拆分的内容。字节数、超时和并发限制仍然生效，其他流式协议暂缓交付。严格缓冲会延迟首段内容。
+本地流式支持限定为单 choice 的有界 OpenAI Chat SSE，需要显式配置 `allow_streaming=true`。交付前缓冲完整响应，拼接并检查文本、工具参数、`reasoning` 与 `reasoning_content`，包括跨事件拆分的内容。工具索引只接受无符号 JSON 整数写法；`-0`、`0.0`、`0e0` 等歧义写法会在交付前暂缓。字节数、超时和并发限制仍然生效，其他流式协议暂缓交付。严格缓冲会延迟首段内容。
 
 本机 HTTP/SSE 与独立 worker 测试使用受控响应验证边界，不代表外部供应商兼容性、隐藏路由或保留策略，也不证明模型质量。
 

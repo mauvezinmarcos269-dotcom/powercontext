@@ -22,6 +22,7 @@ from typing import cast
 from powercontext.builtin.inference.model_payload import (
     complete_tool_arguments,
     contains_opaque_content,
+    json_unsigned_integer,
     nested_json_text,
     parse_json_evidence,
 )
@@ -138,6 +139,16 @@ def inspect_sse(policy: PrivacyPolicy, body: bytes, profile_id: str) -> PrivacyD
                 for choice in choices:
                     if not isinstance(choice, dict) or getattr(choice.get("index"), "lexical", None) != "0":
                         return policy.decision(phase, "withhold", "choice_identity_unsupported")
+                    delta = choice.get("delta")
+                    if isinstance(delta, dict) and delta.get("tool_calls") is not None:
+                        calls = delta.get("tool_calls")
+                        # Only unsigned JSON integers have an unambiguous identity
+                        # across the retained lexical parser and native SDKs.
+                        if not isinstance(calls, list) or any(
+                            not isinstance(call, dict) or json_unsigned_integer(call.get("index")) is None
+                            for call in calls
+                        ):
+                            return policy.decision(phase, "withhold", "tool_identity_unsupported")
                     if finished:
                         return policy.decision(phase, "withhold", "sse_data_after_finish")
                     if choice.get("finish_reason") is not None:

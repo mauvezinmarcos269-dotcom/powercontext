@@ -813,3 +813,126 @@ def test_shadow_leaves_request_stream_unread_until_the_actual_transport() -> Non
     asyncio.run(run())
     assert observations[0].reason_codes == ("request_stream_uninspected",)
     assert observations[0].coverage.complete is False
+
+
+@pytest.mark.parametrize("index", ["-0", "0.0", "0e0", '"0"', "null", "true"])
+def test_native_stream_withholds_ambiguous_tool_indices(index: str) -> None:
+    first = {
+        "id": "test",
+        "object": "chat.completion.chunk",
+        "created": 0,
+        "model": "test-model",
+        "choices": [
+            {
+                "index": 0,
+                "delta": {
+                    "role": "assistant",
+                    "tool_calls": [
+                        {
+                            "index": 0,
+                            "id": "call_test",
+                            "type": "function",
+                            "function": {"name": "synthetic-forbidden-", "arguments": "{}"},
+                        }
+                    ],
+                },
+                "finish_reason": None,
+            }
+        ],
+    }
+    second = (
+        '{"choices":[{"index":0,"delta":{"tool_calls":[{"index":'
+        + index
+        + ',"function":{"name":"secret"}}]},"finish_reason":null}]}'
+    )
+    payload = (
+        f"data: {json.dumps(first)}\n\ndata: {second}\n\n"
+        'data: {"choices":[{"index":0,"delta":{},"finish_reason":"tool_calls"}]}\n\n'
+        "data: [DONE]\n\n"
+    ).encode()
+
+    async def run(endpoint: str) -> None:
+        async with (
+            httpx.AsyncClient(transport=ProtectedAsyncTransport(config(endpoint, allow_streaming=True))) as http,
+            AsyncOpenAI(
+                base_url=endpoint.removesuffix("/chat/completions"), api_key="test", max_retries=0, http_client=http
+            ) as sdk,
+        ):
+            with pytest.raises(APIConnectionError) as caught:
+                async with sdk.chat.completions.stream(
+                    model="test-model",
+                    messages=[{"role": "user", "content": "clean"}],
+                    max_tokens=10,
+                ) as stream:
+                    await stream.get_final_completion()
+            refusal = find_privacy_error(caught.value)
+            assert refusal is not None and refusal.phase == "before_release"
+            assert refusal.reason_codes == ("tool_identity_unsupported",)
+
+    with server([(200, "text/event-stream", payload)]) as (upstream, endpoint):
+        asyncio.run(run(endpoint))
+        assert len(upstream.requests) == 1
+
+
+def test_native_responses_sdk_withholds_image_generation_input_and_output() -> None:
+    item = {"type": "image_generation_call", "id": "ig_test", "status": "completed", "result": "iVBORw0KGgo="}
+    payload = json.dumps({"id": "resp_test", "model": "test-model", "status": "completed", "output": [item]}).encode()
+
+    async def run(endpoint: str) -> None:
+        endpoint = endpoint.replace("/chat/completions", "/responses")
+        protection = config(endpoint)
+        protection = protection.model_copy(
+            update={"targets": {"test": protection.targets["test"].model_copy(update={"protocol": "openai-responses"})}}
+        )
+        async with (
+            httpx.AsyncClient(transport=ProtectedAsyncTransport(protection)) as http,
+            AsyncOpenAI(
+                base_url=endpoint.removesuffix("/responses"), api_key="test", max_retries=0, http_client=http
+            ) as sdk,
+        ):
+            cases: tuple[dict[str, Any], ...] = (
+                {"input": "clean", "tools": [{"type": "image_generation"}]},
+                {"input": [item]},
+            )
+            for extra in cases:
+                with pytest.raises(APIConnectionError) as caught:
+                    await sdk.responses.create(model="test-model", max_output_tokens=10, store=False, **extra)
+                refusal = find_privacy_error(caught.value)
+                assert refusal is not None and refusal.phase == "before_send"
+                assert refusal.reason_codes == ("content_unsupported",)
+            with pytest.raises(APIConnectionError) as caught:
+                await sdk.responses.create(model="test-model", input="clean", max_output_tokens=10, store=False)
+            refusal = find_privacy_error(caught.value)
+            assert refusal is not None and refusal.phase == "before_release"
+            assert refusal.reason_codes == ("content_unsupported",)
+
+    with server([(200, "application/json", payload)]) as (upstream, endpoint):
+        asyncio.run(run(endpoint))
+        assert len(upstream.requests) == 1
+
+
+def test_sse_keeps_distinct_tool_names_separate_but_joins_same_tool() -> None:
+    events: list[dict[str, Any]] = [
+        {
+            "choices": [
+                {
+                    "index": 0,
+                    "delta": {
+                        "tool_calls": [
+                            {
+                                "index": index,
+                                "function": {"name": name, "arguments": "{}"},
+                            }
+                        ]
+                    },
+                    "finish_reason": None,
+                }
+            ]
+        }
+        for index, name in enumerate(("synthetic-forbidden-", "secret"))
+    ]
+    events.append({"choices": [{"index": 0, "delta": {}, "finish_reason": "tool_calls"}]})
+    payload = ("".join(f"data: {json.dumps(event)}\n\n" for event in events) + "data: [DONE]\n\n").encode()
+    policy = PrivacyPolicy(config(allow_streaming=True))
+    assert inspect_sse(policy, payload, "test").decision == "allow"
+    assert inspect_sse(policy, payload.replace(b'"index": 1', b'"index": 0'), "test").decision == "block"

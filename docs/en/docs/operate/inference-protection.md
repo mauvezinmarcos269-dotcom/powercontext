@@ -82,7 +82,8 @@ For built-in Pydantic AI Responses models, set `openai_store: false` in the rele
 Unexpanded `item_reference` inputs, including references whose `type` is omitted or null, are withheld because
 their historical content is unavailable for inspection and window accounting. Pass the complete supported
 text/tool input instead of a provider-side item reference. Anthropic documents support only inline plain-text
-sources; PDF/base64, URL, Files API references, and documents containing images are withheld.
+sources; PDF/base64, URL, Files API references, and documents containing images are withheld. Responses
+image-generation tools and opaque `image_generation_call` results are withheld on input and output.
 
 Built-in OpenAI/Anthropic clients and configured embedding/rerank paths install the checks at the final HTTP
 transport. Native SDK formatting happens first. Enforcing disables SDK transport retries; output-schema retries
@@ -90,13 +91,15 @@ remain bounded by the existing stage and every actual attempt is checked. A mand
 through advisory decision fallbacks and cannot become an empty extraction or a consumed Memory HOLD.
 If a Memory write gate encounters that refusal, flush fails before publication and keeps its Source window
 pending across restart so it can be retried after the policy or model output is corrected.
+Spawned Topic Memory workers inherit the same deployment policy for every generation stage. A refusal leaves
+the Source window pending without publishing or acknowledging it.
 Custom injected inference objects without a controlled final transport are rejected in enforcing mode.
 
 ## Provider usage on failures
 
 Provider-reported input, output, cache-read, cache-write and reasoning counts remain separate from estimates. Missing counts stay unknown. A protected response can consume tokens even when delivery is refused; known usage remains attached to the failure and is reported through the existing scoped usage recorder. Cache-read input can already be included in input tokens and must not be counted twice.
 
-The supported local streaming profile is bounded OpenAI Chat SSE with one choice and explicit `allow_streaming=true`. It buffers the complete stream before release and checks assembled text, tool arguments, `reasoning`, and `reasoning_content`, including content split across events. Byte, timeout, and concurrency limits apply. Other streaming profiles are withheld. Strict buffering delays first content.
+The supported local streaming profile is bounded OpenAI Chat SSE with one choice and explicit `allow_streaming=true`. It buffers the complete stream before release and checks assembled text, tool arguments, `reasoning`, and `reasoning_content`, including content split across events. Tool indices must use unsigned JSON integer spellings; ambiguous spellings such as `-0`, `0.0`, or `0e0` are withheld before release. Byte, timeout, and concurrency limits apply. Other streaming profiles are withheld. Strict buffering delays first content.
 
 Loopback HTTP/SSE and spawned-worker tests verify the owned boundaries with controlled responses. They do not establish external provider compatibility, hidden upstream routing or retention, or model quality.
 
