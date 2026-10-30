@@ -96,6 +96,53 @@ def _require_allow(result: ContextCheckResult, phase: str) -> str:
     return result.binding
 
 
+async def _exchange(
+    target: TrustedTarget, raw_request: bytes, headers: dict[str, str], admission: ContextCheckResult
+) -> tuple[int, dict[str, str], bytes]:
+    if admission.correlate_until is None or admission.correlate_until.tzinfo is None:
+        raise ExecutionRefused("context_admission_refused")
+    loop = asyncio.get_running_loop()
+    now, started = datetime.now(UTC), loop.time()
+    send_deadline = started + (admission.valid_until - now).total_seconds()
+    response_deadline = started + (admission.correlate_until - now).total_seconds()
+    sent = False
+    async with (
+        asyncio.timeout_at(send_deadline) as deadline,
+        httpx.AsyncClient(
+            transport=httpx.AsyncHTTPTransport(retries=0),
+            follow_redirects=False,
+            timeout=target.timeout_seconds,
+            trust_env=False,
+        ) as upstream,
+    ):
+
+        async def trace_send(name: str, _info: dict[str, object]) -> None:
+            nonlocal sent
+            if name in {"http11.send_request_body.complete", "http2.send_request_body.complete"}:
+                _require_allow(admission, "before_send")
+                if loop.time() >= response_deadline:
+                    raise ExecutionRefused("context_admission_refused")
+                sent = True
+                # Only completed writes switch to the independent response budget.
+                # Connection and every request write remain under the send permit.
+                deadline.reschedule(response_deadline)
+
+        _require_allow(admission, "before_send")
+        async with upstream.stream(
+            "POST", target.endpoint, content=raw_request, headers=headers, extensions={"trace": trace_send}
+        ) as response:
+            if not sent:
+                raise ExecutionRefused("request_completion_unconfirmed")
+            if response.headers.get("content-encoding", "identity").lower() not in {"", "identity"}:
+                raise ExecutionRefused("response_encoding_unsupported")
+            raw_response = bytearray()
+            async for chunk in response.aiter_raw():
+                if len(raw_response) + len(chunk) > target.max_response_bytes:
+                    raise ExecutionRefused("response_too_large")
+                raw_response.extend(chunk)
+            return response.status_code, {"content-type": response.headers.get("content-type", "")}, bytes(raw_response)
+
+
 async def execute_checked_json(
     *,
     powercontext: PowerContextClient,
@@ -108,7 +155,9 @@ async def execute_checked_json(
 
     Keep the returned request binding local to this invocation. Caller cancellation
     propagates. Transport uncertainty never authorizes an automatic paid retry.
-    Raw errors, partial responses, unknown coverage and expired approvals are withheld.
+    Connection and writes must finish within the send permit; response collection
+    uses its separate correlation deadline. Raw errors, partial responses, unknown
+    coverage and expired approvals are withheld.
     """
     # Snapshot mutable DTO children before the first await; later caller mutations
     # cannot change the bytes or locations already submitted for admission.
@@ -130,24 +179,8 @@ async def execute_checked_json(
         async with asyncio.timeout(target.timeout_seconds):
             admission = await powercontext.check_context(request)
             request_binding = _require_allow(admission, "before_send")
-            async with httpx.AsyncClient(
-                transport=httpx.AsyncHTTPTransport(retries=0),
-                follow_redirects=False,
-                timeout=target.timeout_seconds,
-                trust_env=False,
-            ) as upstream:
-                # No representation changes, fallback or retry occur after approval.
-                _require_allow(admission, "before_send")
-                async with upstream.stream("POST", target.endpoint, content=raw_request, headers=headers) as response:
-                    if response.headers.get("content-encoding", "identity").lower() not in {"", "identity"}:
-                        raise ExecutionRefused("response_encoding_unsupported")
-                    raw_response = bytearray()
-                    async for chunk in response.aiter_raw():
-                        if len(raw_response) + len(chunk) > target.max_response_bytes:
-                            raise ExecutionRefused("response_too_large")
-                        raw_response.extend(chunk)
-                    response_status = response.status_code
-                    response_headers = {"content-type": response.headers.get("content-type", "")}
+            # No representation changes, fallback or retry occur after approval.
+            response_status, response_headers, raw_response = await _exchange(target, raw_request, headers, admission)
             checked = await powercontext.check_context(
                 CheckContextRequest.model_validate({
                     "scope_id": scope_id,
@@ -165,6 +198,6 @@ async def execute_checked_json(
             _require_allow(checked, "before_release")
             if not 200 <= response_status < 300:
                 raise ExecutionRefused("upstream_http_error")
-            return bytes(raw_response)
+            return raw_response
     except (TimeoutError, httpx.HTTPError, UnicodeError, ValidationError, ClientError):
         raise ExecutionRefused("execution_unavailable_or_uncertain") from None

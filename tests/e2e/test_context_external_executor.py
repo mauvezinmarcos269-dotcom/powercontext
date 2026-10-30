@@ -18,20 +18,26 @@ from __future__ import annotations
 
 import asyncio
 import json
+import time
+from datetime import timedelta
 
 import httpx
 import pytest
+from httpcore._backends.anyio import AnyIOBackend, AnyIOStream
 from pydantic import SecretStr
 
 from examples.context_protection.external_executor import ExecutionRefused, TrustedTarget, execute_checked_json
 from powercontext.builtin.runtime import InferenceConfig
+from powercontext.builtin.runtime import context_check as context_check_runtime
 from powercontext.client import PowerContextClient
 from powercontext.http import ModelJsonPayload, PrepareContextRequest, PreparedContextLocation, PreparedContextWithReuse
 from powercontext.server.authz.composition import open_builtin_access_control
 from powercontext.server.factory import create_server_app
 from tests.e2e.server_storage import prepare_server_database
+from tests.e2e.test_access_control_regressions import _scope, _server
+from tests.e2e.test_context_check_authorization import _inference
 from tests.e2e.test_context_protection_transports import _ADMIN, _Authentication, _create_scope, _send, _settings
-from tests.e2e.test_rfc2086_transport_acceptance import upstream
+from tests.e2e.test_rfc2086_transport_acceptance import RecordingHandler, upstream
 
 _SECRET = "synthetic-transport-secret"  # noqa: S105 - deliberately forbidden synthetic fixture
 
@@ -169,6 +175,73 @@ def test_external_executor_preserves_approved_bytes_and_withholds_blocked_conten
             assert "private upstream diagnostic" not in str(failed.value)
             assert len(server.received) == 3
             assert released == [safe_output]
+
+    with upstream(safe_output) as server:
+        asyncio.run(scenario(server))
+
+
+@pytest.mark.parametrize("delay_phase", ["connect", "write", "response"])
+def test_external_executor_bounds_send_work_without_expiring_an_on_time_response(tmp_path, monkeypatch, delay_phase):
+    monkeypatch.setattr(context_check_runtime, "SEND_VALIDITY", timedelta(seconds=1))
+    if delay_phase == "response":
+        original_post = RecordingHandler.do_POST
+
+        def delayed_response(handler):
+            time.sleep(2)
+            original_post(handler)
+
+        monkeypatch.setattr(RecordingHandler, "do_POST", delayed_response)
+    else:
+        owner, method = (AnyIOBackend, "connect_tcp") if delay_phase == "connect" else (AnyIOStream, "write")
+        original = getattr(owner, method)
+        delayed = False
+
+        async def delayed_send(*args, **kwargs):
+            nonlocal delayed
+            if not delayed:
+                delayed = True
+                await asyncio.sleep(2)
+            return await original(*args, **kwargs)
+
+        monkeypatch.setattr(owner, method, delayed_send)
+
+    safe_output = _response("The response may arrive after the send permit expires.")
+
+    async def scenario(server):
+        endpoint = f"http://127.0.0.1:{server.server_port}/v1/chat/completions"
+        inference = _inference()
+        target = inference.protection.targets["model"].model_copy(update={"endpoint": endpoint})
+        inference = inference.model_copy(
+            update={"protection": inference.protection.model_copy(update={"targets": {"model": target}})}
+        )
+        async with _server(tmp_path, inference=inference) as (_, http, _):
+            scope_id = await _scope(http)
+            client = PowerContextClient("http://localhost", http_client=http)
+            payload = ModelJsonPayload.model_validate({
+                "schema": "powercontext.model-json-payload.v1",
+                "headers": {"content-type": "application/json"},
+                "body": json.dumps({
+                    "model": "test",
+                    "max_tokens": 64,
+                    "messages": [{"role": "user", "content": "safe"}],
+                }),
+            })
+
+            async def execute():
+                return await execute_checked_json(
+                    powercontext=client,
+                    target=TrustedTarget(profile_id="model", endpoint=endpoint, timeout_seconds=10),
+                    scope_id=scope_id,
+                    payload=payload,
+                )
+
+            if delay_phase == "response":
+                assert await execute() == safe_output
+                assert server.received == [payload.body.encode()]
+            else:
+                with pytest.raises(ExecutionRefused, match="execution_unavailable_or_uncertain"):
+                    await execute()
+                assert server.received == []
 
     with upstream(safe_output) as server:
         asyncio.run(scenario(server))
