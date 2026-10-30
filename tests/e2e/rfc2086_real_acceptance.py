@@ -151,7 +151,7 @@ async def inspect_database(settings: ServerSettings) -> dict[str, Any]:
         context = SQLiteProfile.open_readonly(database)
         version_statement = "SELECT sqlite_version()"
     elif isinstance(database, OceanBaseConfig):
-        context = OceanBaseProfile.open(database, tables=())
+        context = OceanBaseProfile.open_existing(database, tables=())
         version_statement = "SELECT VERSION()"
     elif isinstance(database, SeekDBConfig):
         # Opening embedded SeekDB can create paths. A dedicated run owns that

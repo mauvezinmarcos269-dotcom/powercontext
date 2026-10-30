@@ -424,7 +424,10 @@ async def _run_judges(config, args, catalog, attempts, references, questions_by_
 
         if references is None:
             await asyncio.gather(
-                *(author_case(case_id) for case_id in sorted({row["instance_id"] for row in attempts}))
+                *(
+                    author_case(case_id)
+                    for case_id in sorted({row["instance_id"] for row in attempts if row["status"] == "succeeded"})
+                )
             )
 
         async def assess(row):

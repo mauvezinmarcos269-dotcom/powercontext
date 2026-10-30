@@ -104,12 +104,41 @@ def _json_bytes(value: Any) -> bytes:
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
 
 
+def _reject_anthropic_discovery(inference: InferenceConfig, environment: Mapping[str, str]) -> None:
+    # The SDK discovers profiles only when both static credential arguments and
+    # their environment values are None. Profile contents are outside this identity.
+    if any(environment.get(name) is not None for name in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN")):
+        return
+    generation_headers = {
+        name.casefold(): value.get_secret_value() for name, value in inference.generation_headers.items()
+    }
+    for operation in ("generation", "rerank", "decision"):
+        model = getattr(inference, f"{operation}_model")
+        headers = {
+            name.casefold(): value.get_secret_value()
+            for name, value in getattr(inference, f"{operation}_headers").items()
+        }
+        if model is None:
+            model = inference.generation_model
+            headers = {**generation_headers, **headers}
+        if (
+            model is not None
+            and model.startswith("anthropic:")
+            and "authorization" in headers
+            and not headers.get("x-api-key")
+        ):
+            raise ConfigurationIdentityError(  # noqa: TRY003
+                "Anthropic profile discovery is not supported; configure a static credential"
+            )
+
+
 def _provider_environment(
     configurations: Mapping[str, BuiltinConfig | InferenceConfig], environment: Mapping[str, str]
 ) -> dict[str, str | None]:
     names: set[str] = set()
     for config in configurations.values():
         inference = config.inference if isinstance(config, BuiltinConfig) else config
+        _reject_anthropic_discovery(inference, environment)
         for model in (
             inference.generation_model,
             inference.embedding_model,
