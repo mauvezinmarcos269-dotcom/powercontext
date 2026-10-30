@@ -200,11 +200,21 @@ def test_equal_text_in_distinct_sources_keeps_each_occurrence_and_time() -> None
 def test_reconciliation_retains_proposal_related_order_and_evidence_bindings() -> None:
     evidence = _input().evidence
     proposal = AtomicMemoryComparisonItem(
-        item_id="proposal", kind="constraint", text=_DETAIL, original_refs=(), evidence_ids=("source:1", "source:2")
+        item_id="proposal",
+        kind="constraint",
+        text=_DETAIL,
+        description="保留独立约束与原始引用。",
+        original_refs=(),
+        evidence_ids=("source:1", "source:2"),
     )
     related = (
         AtomicMemoryComparisonItem(
-            item_id="related-2", kind="fact", text=_DETAIL, original_refs=(), evidence_ids=("source:5",)
+            item_id="related-2",
+            kind="fact",
+            text=_DETAIL,
+            description="Historical fact with its own source.",
+            original_refs=(),
+            evidence_ids=("source:5",),
         ),
         AtomicMemoryComparisonItem(
             item_id="related-1", kind="fact", text="A different fact", original_refs=(), evidence_ids=("source:3",)
