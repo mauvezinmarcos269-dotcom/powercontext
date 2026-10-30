@@ -98,7 +98,7 @@ def test_reuse_preserves_final_value_and_revalidates_without_recalling(tmp_path)
     asyncio.run(scenario())
 
 
-@pytest.mark.parametrize("change", ["revise", "forget", "merge"])
+@pytest.mark.parametrize("change", ["revise", "description", "forget", "merge"])
 def test_prepared_reuse_rejects_current_root_changes(change):
     async def scenario():
         async with open_builtin_runtime(BuiltinConfig(database=SQLiteConfig())) as runtime:
@@ -111,13 +111,25 @@ def test_prepared_reuse_rejects_current_root_changes(change):
             prepared = await scoped.prepare(_request())
             assert isinstance(prepared, PreparedContextWithReuse)
             primary = created.primary
-            if change == "revise":
+            if change in {"revise", "description"}:
                 await runtime.records.for_scope(scope.scope_id).replace_artifact(
                     "atomic-memory",
                     primary.ref.artifact_id,
                     '"revision:1"',
-                    ArtifactWrite(content={"kind": "fact", "text": "Alpha replacement constraint."}),
+                    ArtifactWrite(
+                        content={
+                            "kind": "fact",
+                            "text": "Alpha replacement constraint."
+                            if change == "revise"
+                            else primary.artifact.content.text,
+                            "description": "Updated constraint summary.",
+                        }
+                    ),
                 )
+                if change == "description":
+                    revised = await memory.get(primary.ref.artifact_id)
+                    assert revised.artifact.content.text == primary.artifact.content.text
+                    assert revised.artifact.content.description != primary.artifact.content.description
             elif change == "forget":
                 await memory.forget(primary.ref.artifact_id, expected_revision=1, expected_state_version=0)
             else:
