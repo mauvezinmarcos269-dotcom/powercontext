@@ -1,0 +1,430 @@
+kind: app
+version: 0.4.0
+dependencies: []
+app:
+  name: 记仇杂货铺
+  description: 跨会话记得恶作剧的葛掌柜。帮忙、送礼、和解，买走会打嗝的月亮。Dify × PowerContext。
+  mode: advanced-chat
+  icon: 🏮
+  icon_background: '#FFEAD5'
+  use_icon_as_answer_icon: true
+workflow:
+  conversation_variables: []
+  environment_variables:
+  - id: f32cf702-0b40-4cd8-8581-95a687a1d041
+    name: SHOP_BASE_URL
+    value: http://host.docker.internal:8012
+    value_type: string
+    selector:
+    - env
+    - SHOP_BASE_URL
+    description: Dify 容器可访问的杂货铺服务地址
+  - id: 9b9e9e94-7a86-4e1b-b329-4821c5c99903
+    name: SHOP_API_KEY
+    value: REPLACE_WITH_LOCAL_SHOP_API_KEY
+    value_type: secret
+    selector:
+    - env
+    - SHOP_API_KEY
+    description: 与后端 .env 的 SHOP_API_KEY 一致
+  features:
+    opening_statement: '🏮 欢迎来到记仇杂货铺。葛掌柜嘴硬心软，唯一的毛病是：记性太好。
+
+
+      输入「恶作剧 把招财猫换成尖叫鸡」试试，再开一个新会话回来。
+
+
+      目标：让老板愿意卖给你「会打嗝的月亮」。帮忙赚币，送礼增好感，道歉消旧怨。输入「重开」恢复本局初始状态。'
+    suggested_questions:
+    - 恶作剧 把招财猫换成尖叫鸡
+    - 帮忙
+    - 看看
+    suggested_questions_after_answer:
+      enabled: false
+    retriever_resource:
+      enabled: false
+    speech_to_text:
+      enabled: false
+    text_to_speech:
+      enabled: false
+    sensitive_word_avoidance:
+      enabled: false
+    file_upload:
+      enabled: false
+  graph:
+    nodes:
+    - id: start
+      type: custom
+      position:
+        x: 0
+        y: 260
+      width: 244
+      height: 54
+      sourcePosition: right
+      targetPosition: left
+      data:
+        type: start
+        title: 进店
+        desc: 同一浏览器或 API user 对应同一账本
+        variables: []
+        selected: false
+    - id: input
+      type: custom
+      position:
+        x: 300
+        y: 260
+      width: 244
+      height: 98
+      sourcePosition: right
+      targetPosition: left
+      data:
+        type: code
+        title: 识别动作 · 安全编码
+        desc: ''
+        selected: false
+        code_language: python3
+        code: "import json\ndef main(query: str, user: str, run: str, app: str) -> dict:\n    query = query.strip()\n    if\
+          \ not query or len(query) > 400:\n        raise ValueError(\"请输入 1～400 字的动作\")\n    action = \"look\"\n    commands\
+          \ = {\"恶作剧\": \"prank\", \"帮忙\": \"help\", \"送礼\": \"gift\", \"道歉\": \"apologize\", \"买月亮\": \"buy\", \"重开\": \"\
+          reset\", \"看看\": \"look\"}\n    for prefix, value in commands.items():\n        if query == prefix or query.startswith(prefix\
+          \ + \" \") or query.startswith(prefix + \"：\") or query.startswith(prefix + \":\"):\n            action = value\n\
+          \            break\n    return {\"body\": json.dumps({\"player\": \"dify:\" + app + \":\" + user,\n        \"operation_id\"\
+          : run, \"action\": action, \"detail\": query}, ensure_ascii=False)}"
+        variables:
+        - variable: query
+          value_selector:
+          - sys
+          - query
+        - variable: user
+          value_selector:
+          - sys
+          - user_id
+        - variable: run
+          value_selector:
+          - sys
+          - workflow_run_id
+        - variable: app
+          value_selector:
+          - sys
+          - app_id
+        outputs:
+          body:
+            type: string
+            children: null
+    - id: recall
+      type: custom
+      position:
+        x: 600
+        y: 260
+      width: 244
+      height: 122
+      sourcePosition: right
+      targetPosition: left
+      data:
+        type: http-request
+        title: PowerContext · 读取旧账
+        desc: ''
+        selected: false
+        method: post
+        url: '{{#env.SHOP_BASE_URL#}}/turn/prepare'
+        authorization:
+          type: no-auth
+        headers: 'Content-Type:application/json
+
+          Authorization:Bearer {{#env.SHOP_API_KEY#}}'
+        params: ''
+        body:
+          type: json
+          data:
+          - key: ''
+            type: text
+            value: '{{#input.body#}}'
+        timeout:
+          connect: 10
+          read: 180
+          write: 20
+        ssl_verify: true
+        retry_config:
+          retry_enabled: false
+          max_retries: 0
+          retry_interval: 1000
+    - id: ticket
+      type: custom
+      position:
+        x: 900
+        y: 260
+      width: 244
+      height: 98
+      sourcePosition: right
+      targetPosition: left
+      data:
+        type: code
+        title: 核对记忆读取结果
+        desc: ''
+        selected: false
+        code_language: python3
+        code: "import json\ndef main(body: str, status: int) -> dict:\n    if status != 200:\n        raise ValueError(\"\
+          旧账读取失败，本轮未继续；请检查记忆服务后重试\")\n    data = json.loads(body)\n    return {\"body\": json.dumps({\"ticket\": data[\"ticket\"\
+          ]}), \"ticket\": data[\"ticket\"]}"
+        variables:
+        - variable: body
+          value_selector:
+          - recall
+          - body
+        - variable: status
+          value_selector:
+          - recall
+          - status_code
+        outputs:
+          body:
+            type: string
+            children: null
+          ticket:
+            type: string
+            children: null
+    - id: model
+      type: custom
+      position:
+        x: 1200
+        y: 260
+      width: 244
+      height: 122
+      sourcePosition: right
+      targetPosition: left
+      data:
+        type: http-request
+        title: MiniMax · 老板即兴接梗
+        desc: ''
+        selected: false
+        method: post
+        url: '{{#env.SHOP_BASE_URL#}}/turn/narrate'
+        authorization:
+          type: no-auth
+        headers: 'Content-Type:application/json
+
+          Authorization:Bearer {{#env.SHOP_API_KEY#}}'
+        params: ''
+        body:
+          type: json
+          data:
+          - key: ''
+            type: text
+            value: '{{#ticket.body#}}'
+        timeout:
+          connect: 10
+          read: 180
+          write: 20
+        ssl_verify: true
+        retry_config:
+          retry_enabled: false
+          max_retries: 0
+          retry_interval: 1000
+    - id: narration
+      type: custom
+      position:
+        x: 1500
+        y: 260
+      width: 244
+      height: 98
+      sourcePosition: right
+      targetPosition: left
+      data:
+        type: code
+        title: 核对模型结果 · 准备存档
+        desc: ''
+        selected: false
+        code_language: python3
+        code: "import json\ndef main(body: str, status: int, ticket: str) -> dict:\n    if status != 200:\n        raise ValueError(\"\
+          老板暂时卡壳，本轮尚未存档；请稍后重试\")\n    data = json.loads(body)\n    return {\"body\": json.dumps({\"ticket\": ticket, \"narration\"\
+          : data[\"narration\"],\n        \"narration_proof\": data[\"narration_proof\"]}, ensure_ascii=False)}"
+        variables:
+        - variable: body
+          value_selector:
+          - model
+          - body
+        - variable: status
+          value_selector:
+          - model
+          - status_code
+        - variable: ticket
+          value_selector:
+          - ticket
+          - ticket
+        outputs:
+          body:
+            type: string
+            children: null
+    - id: save
+      type: custom
+      position:
+        x: 1800
+        y: 260
+      width: 244
+      height: 122
+      sourcePosition: right
+      targetPosition: left
+      data:
+        type: http-request
+        title: PowerContext · 写入新账
+        desc: ''
+        selected: false
+        method: post
+        url: '{{#env.SHOP_BASE_URL#}}/turn/commit'
+        authorization:
+          type: no-auth
+        headers: 'Content-Type:application/json
+
+          Authorization:Bearer {{#env.SHOP_API_KEY#}}'
+        params: ''
+        body:
+          type: json
+          data:
+          - key: ''
+            type: text
+            value: '{{#narration.body#}}'
+        timeout:
+          connect: 10
+          read: 180
+          write: 20
+        ssl_verify: true
+        retry_config:
+          retry_enabled: false
+          max_retries: 0
+          retry_interval: 1000
+    - id: display
+      type: custom
+      position:
+        x: 2100
+        y: 260
+      width: 244
+      height: 98
+      sourcePosition: right
+      targetPosition: left
+      data:
+        type: code
+        title: 展示结果 · 存档凭证
+        desc: ''
+        selected: false
+        code_language: python3
+        code: "import json\ndef main(body: str, status: int) -> dict:\n    if status != 200:\n        raise ValueError(\"\
+          本轮存档未确认（可能有并发或服务故障），请重新进店查看账本\")\n    r = json.loads(body)\n    s = r[\"state\"]\n    medal = \" · \U0001F319 冤家熟客结局已解锁\"\
+          \ if s[\"won\"] else \"\"\n    recalled = \"旧账已召回\" if r[\"recalled_memory_id\"] else \"首次进店\"\n    text = f\"###\
+          \ \U0001F3EE 葛掌柜\\n\\n{r['narration']}\\n\\n**本轮结果**：{r['outcome']}\\n\\n\U0001FA99 {s['coins']} 店币 · \U0001F336\
+          ️ 记仇 {s['grudge']}/10 · \U0001F375 好感 {s['friendship']}/10{medal}\\n\\n\U0001F319 月亮现价 **{r['moon_price']}** 店币（好感\
+          \ ≥4、记仇 ≤1 才能买）\\n\\n---\\n输入：`恶作剧 你的点子` · `帮忙` · `送礼` · `道歉` · `买月亮` · `看看` · `重开`\\n\\n\U0001F4BE 第 {s['seq']}\
+          \ 笔账已保存 · {recalled}\\n\\n<details><summary>记忆存档凭证</summary>\\n\\nPowerContext 写入：`{r['memory_id']}`\\n\\n本轮读取：`{r['recalled_memory_id']\
+          \ or '无'}`\\n\\n</details>\"\n    return {\"answer\": text}"
+        variables:
+        - variable: body
+          value_selector:
+          - save
+          - body
+        - variable: status
+          value_selector:
+          - save
+          - status_code
+        outputs:
+          answer:
+            type: string
+            children: null
+    - id: answer
+      type: custom
+      position:
+        x: 2400
+        y: 260
+      width: 244
+      height: 105
+      sourcePosition: right
+      targetPosition: left
+      data:
+        type: answer
+        title: 开门迎客
+        desc: ''
+        answer: '{{#display.answer#}}'
+        variables: []
+        selected: false
+    edges:
+    - id: start-input
+      type: custom
+      source: start
+      target: input
+      sourceHandle: source
+      targetHandle: target
+      data:
+        sourceType: start
+        targetType: code
+        isInIteration: false
+    - id: input-recall
+      type: custom
+      source: input
+      target: recall
+      sourceHandle: source
+      targetHandle: target
+      data:
+        sourceType: code
+        targetType: http-request
+        isInIteration: false
+    - id: recall-ticket
+      type: custom
+      source: recall
+      target: ticket
+      sourceHandle: source
+      targetHandle: target
+      data:
+        sourceType: http-request
+        targetType: code
+        isInIteration: false
+    - id: ticket-model
+      type: custom
+      source: ticket
+      target: model
+      sourceHandle: source
+      targetHandle: target
+      data:
+        sourceType: code
+        targetType: http-request
+        isInIteration: false
+    - id: model-narration
+      type: custom
+      source: model
+      target: narration
+      sourceHandle: source
+      targetHandle: target
+      data:
+        sourceType: http-request
+        targetType: code
+        isInIteration: false
+    - id: narration-save
+      type: custom
+      source: narration
+      target: save
+      sourceHandle: source
+      targetHandle: target
+      data:
+        sourceType: code
+        targetType: http-request
+        isInIteration: false
+    - id: save-display
+      type: custom
+      source: save
+      target: display
+      sourceHandle: source
+      targetHandle: target
+      data:
+        sourceType: http-request
+        targetType: code
+        isInIteration: false
+    - id: display-answer
+      type: custom
+      source: display
+      target: answer
+      sourceHandle: source
+      targetHandle: target
+      data:
+        sourceType: code
+        targetType: answer
+        isInIteration: false
+    viewport:
+      x: 0
+      y: 0
+      zoom: 0.65

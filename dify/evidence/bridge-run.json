@@ -1,0 +1,143 @@
+{
+  "run": "ba5ec9d19434",
+  "player": "bridge-alice-ba5ec9d19434",
+  "checks": [
+    {
+      "name": "API key required",
+      "passed": true
+    },
+    {
+      "name": "new player starts empty",
+      "passed": true
+    },
+    {
+      "name": "prank persisted to PowerContext",
+      "passed": true
+    },
+    {
+      "name": "commit retry is idempotent",
+      "passed": true
+    },
+    {
+      "name": "fresh request recalls actual artifact",
+      "passed": true
+    },
+    {
+      "name": "recalled memory reaches AI narration",
+      "passed": true
+    },
+    {
+      "name": "different players isolated",
+      "passed": true
+    },
+    {
+      "name": "narration cannot be replaced before commit",
+      "passed": true
+    },
+    {
+      "name": "invalid ticket rejected",
+      "passed": true
+    }
+  ],
+  "turns": [
+    {
+      "prior_state": {
+        "seq": 0,
+        "coins": 10,
+        "grudge": 0,
+        "friendship": 0,
+        "pranks": 0,
+        "won": false,
+        "signature_prank": "",
+        "deeds": [],
+        "receipts": []
+      },
+      "result": {
+        "narration": "“招财猫变尖叫鸡，客人吓跑，还掉出1枚店币！记你两大罪，哼，店币照收，假货可退。”",
+        "outcome": "恶作剧成功！掉出 1 店币；老板记仇 +2，月亮涨价了。",
+        "state": {
+          "seq": 1,
+          "coins": 11,
+          "grudge": 2,
+          "friendship": 0,
+          "pranks": 1,
+          "won": false
+        },
+        "moon_price": 12,
+        "scope_id": "scp_0kfckfe1p5yn79fcheep7704vf",
+        "memory_id": "art_9743a79e914f40648b18e235f3e3e9e2",
+        "recalled_memory_id": null,
+        "saved": true
+      },
+      "model": "MiniMax-M2.5",
+      "usage": {
+        "total_tokens": 602,
+        "total_characters": 0,
+        "prompt_tokens": 375,
+        "completion_tokens": 227,
+        "completion_tokens_details": {
+          "reasoning_tokens": 189
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 128
+        }
+      }
+    },
+    {
+      "prior_state": {
+        "seq": 1,
+        "coins": 11,
+        "grudge": 2,
+        "friendship": 0,
+        "pranks": 1,
+        "won": false,
+        "signature_prank": "恶作剧 把招财猫换成尖叫鸡",
+        "deeds": [
+          {
+            "action": "prank",
+            "detail": "恶作剧 把招财猫换成尖叫鸡"
+          }
+        ],
+        "receipts": [
+          {
+            "op": "af12cfc2-d947-4e85-aadd-94b2a741efd6",
+            "action": "prank",
+            "detail_hash": "4b297ca3526aa528870c6588e389a1b5689be3287bd5692e080c73625c064604",
+            "narration": "“招财猫变尖叫鸡，客人吓跑，还掉出1枚店币！记你两大罪，哼，店币照收，假货可退。”",
+            "outcome": "恶作剧成功！掉出 1 店币；老板记仇 +2，月亮涨价了。"
+          }
+        ]
+      },
+      "result": {
+        "narration": "“记得？招财猫被你换成尖叫鸡，那一声差点掀了屋顶！新账记着，货照卖，仇也照算。”",
+        "outcome": "老板翻开旧账本迎客。试试恶作剧，再开新会话回来看看。",
+        "state": {
+          "seq": 2,
+          "coins": 11,
+          "grudge": 2,
+          "friendship": 0,
+          "pranks": 1,
+          "won": false
+        },
+        "moon_price": 12,
+        "scope_id": "scp_0kfckfe1p5yn79fcheep7704vf",
+        "memory_id": "art_f3be45b818674143b8a3064648af18d9",
+        "recalled_memory_id": "art_9743a79e914f40648b18e235f3e3e9e2",
+        "saved": true
+      },
+      "model": "MiniMax-M2.5",
+      "usage": {
+        "total_tokens": 505,
+        "total_characters": 0,
+        "prompt_tokens": 400,
+        "completion_tokens": 105,
+        "completion_tokens_details": {
+          "reasoning_tokens": 71
+        },
+        "prompt_tokens_details": {
+          "cached_tokens": 128
+        }
+      }
+    }
+  ]
+}

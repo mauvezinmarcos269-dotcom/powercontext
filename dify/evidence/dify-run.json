@@ -1,0 +1,679 @@
+{
+  "run": "fd0a6d3c01",
+  "transport": "Dify /v1/chat-messages streaming",
+  "turns": [
+    {
+      "query": "恶作剧 把招财猫换成尖叫鸡",
+      "user": "dify-alice-fd0a6d3c01",
+      "conversation_id": "80b0b300-e3bd-4513-9ef4-49be8b10a206",
+      "workflow_run_id": "e7749484-572d-492f-bae7-5e2dba0d62e7",
+      "answer": "### 🏮 葛掌柜\n\n“这回把招财猫换成尖叫鸡，客人都吓掉1枚店币。记仇+2，月亮涨价！葛掌柜可不陪笑。”\n\n**本轮结果**：恶作剧成功！掉出 1 店币；老板记仇 +2，月亮涨价了。\n\n🪙 11 店币 · 🌶️ 记仇 2/10 · 🍵 好感 0/10\n\n🌙 月亮现价 **12** 店币（好感 ≥4、记仇 ≤1 才能买）\n\n---\n输入：`恶作剧 你的点子` · `帮忙` · `送礼` · `道歉` · `买月亮` · `看看` · `重开`\n\n💾 第 1 笔账已保存 · 首次进店\n\n<details><summary>记忆存档凭证</summary>\n\nPowerContext 写入：`art_508d085b97ce4b7188aad38fbefa833a`\n\n本轮读取：`无`\n\n</details>",
+      "memory_artifacts": [
+        "art_508d085b97ce4b7188aad38fbefa833a"
+      ],
+      "nodes": [
+        {
+          "node_id": "start",
+          "node_type": "start",
+          "title": "进店",
+          "status": "succeeded",
+          "elapsed_time": 0.014828
+        },
+        {
+          "node_id": "input",
+          "node_type": "code",
+          "title": "识别动作 · 安全编码",
+          "status": "succeeded",
+          "elapsed_time": 0.03574
+        },
+        {
+          "node_id": "recall",
+          "node_type": "http-request",
+          "title": "PowerContext · 读取旧账",
+          "status": "succeeded",
+          "elapsed_time": 0.114506
+        },
+        {
+          "node_id": "ticket",
+          "node_type": "code",
+          "title": "核对记忆读取结果",
+          "status": "succeeded",
+          "elapsed_time": 0.032219
+        },
+        {
+          "node_id": "model",
+          "node_type": "http-request",
+          "title": "MiniMax · 老板即兴接梗",
+          "status": "succeeded",
+          "elapsed_time": 3.835292
+        },
+        {
+          "node_id": "narration",
+          "node_type": "code",
+          "title": "核对模型结果 · 准备存档",
+          "status": "succeeded",
+          "elapsed_time": 0.033954
+        },
+        {
+          "node_id": "save",
+          "node_type": "http-request",
+          "title": "PowerContext · 写入新账",
+          "status": "succeeded",
+          "elapsed_time": 0.173824
+        },
+        {
+          "node_id": "display",
+          "node_type": "code",
+          "title": "展示结果 · 存档凭证",
+          "status": "succeeded",
+          "elapsed_time": 0.035734
+        },
+        {
+          "node_id": "answer",
+          "node_type": "answer",
+          "title": "开门迎客",
+          "status": "succeeded",
+          "elapsed_time": 0.018983
+        }
+      ]
+    },
+    {
+      "query": "看看 老板你还记得我吗？",
+      "user": "dify-alice-fd0a6d3c01",
+      "conversation_id": "17f39619-ea21-4b6e-8e89-89f9432ea240",
+      "workflow_run_id": "c15a27ec-dc5b-48f4-a881-864389d18e93",
+      "answer": "### 🏮 葛掌柜\n\n记得！招财猫被你换成尖叫鸡，害我门口鸡飞狗跳。想买东西？先赔精神损失！哼，看在熟客份上，给你打个折。\n\n**本轮结果**：老板翻开旧账本迎客。试试恶作剧，再开新会话回来看看。\n\n🪙 11 店币 · 🌶️ 记仇 2/10 · 🍵 好感 0/10\n\n🌙 月亮现价 **12** 店币（好感 ≥4、记仇 ≤1 才能买）\n\n---\n输入：`恶作剧 你的点子` · `帮忙` · `送礼` · `道歉` · `买月亮` · `看看` · `重开`\n\n💾 第 2 笔账已保存 · 旧账已召回\n\n<details><summary>记忆存档凭证</summary>\n\nPowerContext 写入：`art_be5a2d3e9c4842089cec988d02fb0e5f`\n\n本轮读取：`art_508d085b97ce4b7188aad38fbefa833a`\n\n</details>",
+      "memory_artifacts": [
+        "art_be5a2d3e9c4842089cec988d02fb0e5f",
+        "art_508d085b97ce4b7188aad38fbefa833a"
+      ],
+      "nodes": [
+        {
+          "node_id": "start",
+          "node_type": "start",
+          "title": "进店",
+          "status": "succeeded",
+          "elapsed_time": 0.014251
+        },
+        {
+          "node_id": "input",
+          "node_type": "code",
+          "title": "识别动作 · 安全编码",
+          "status": "succeeded",
+          "elapsed_time": 0.032527
+        },
+        {
+          "node_id": "recall",
+          "node_type": "http-request",
+          "title": "PowerContext · 读取旧账",
+          "status": "succeeded",
+          "elapsed_time": 0.068904
+        },
+        {
+          "node_id": "ticket",
+          "node_type": "code",
+          "title": "核对记忆读取结果",
+          "status": "succeeded",
+          "elapsed_time": 0.034785
+        },
+        {
+          "node_id": "model",
+          "node_type": "http-request",
+          "title": "MiniMax · 老板即兴接梗",
+          "status": "succeeded",
+          "elapsed_time": 3.462092
+        },
+        {
+          "node_id": "narration",
+          "node_type": "code",
+          "title": "核对模型结果 · 准备存档",
+          "status": "succeeded",
+          "elapsed_time": 0.036268
+        },
+        {
+          "node_id": "save",
+          "node_type": "http-request",
+          "title": "PowerContext · 写入新账",
+          "status": "succeeded",
+          "elapsed_time": 0.172339
+        },
+        {
+          "node_id": "display",
+          "node_type": "code",
+          "title": "展示结果 · 存档凭证",
+          "status": "succeeded",
+          "elapsed_time": 0.041157
+        },
+        {
+          "node_id": "answer",
+          "node_type": "answer",
+          "title": "开门迎客",
+          "status": "succeeded",
+          "elapsed_time": 0.017211
+        }
+      ]
+    },
+    {
+      "query": "帮忙",
+      "user": "dify-alice-fd0a6d3c01",
+      "conversation_id": "4288a3ff-cc75-4ccf-afbb-5fa047c30e2b",
+      "workflow_run_id": "076c6d89-54c7-41d9-a816-b318d4ef3c9e",
+      "answer": "### 🏮 葛掌柜\n\n行，看在这次帮忙的份上，饶你一回。以前把招财猫换成尖叫鸡的账我还记着呢——咸鱼翻身，算你有点良心。\n\n**本轮结果**：你帮货架上的咸鱼翻了个身，店币 +2，好感 +1。\n\n🪙 13 店币 · 🌶️ 记仇 2/10 · 🍵 好感 1/10\n\n🌙 月亮现价 **11** 店币（好感 ≥4、记仇 ≤1 才能买）\n\n---\n输入：`恶作剧 你的点子` · `帮忙` · `送礼` · `道歉` · `买月亮` · `看看` · `重开`\n\n💾 第 3 笔账已保存 · 旧账已召回\n\n<details><summary>记忆存档凭证</summary>\n\nPowerContext 写入：`art_7514715ae1be4782af4749a33af3782c`\n\n本轮读取：`art_be5a2d3e9c4842089cec988d02fb0e5f`\n\n</details>",
+      "memory_artifacts": [
+        "art_7514715ae1be4782af4749a33af3782c",
+        "art_be5a2d3e9c4842089cec988d02fb0e5f"
+      ],
+      "nodes": [
+        {
+          "node_id": "start",
+          "node_type": "start",
+          "title": "进店",
+          "status": "succeeded",
+          "elapsed_time": 0.014669
+        },
+        {
+          "node_id": "input",
+          "node_type": "code",
+          "title": "识别动作 · 安全编码",
+          "status": "succeeded",
+          "elapsed_time": 0.033961
+        },
+        {
+          "node_id": "recall",
+          "node_type": "http-request",
+          "title": "PowerContext · 读取旧账",
+          "status": "succeeded",
+          "elapsed_time": 0.072963
+        },
+        {
+          "node_id": "ticket",
+          "node_type": "code",
+          "title": "核对记忆读取结果",
+          "status": "succeeded",
+          "elapsed_time": 0.032505
+        },
+        {
+          "node_id": "model",
+          "node_type": "http-request",
+          "title": "MiniMax · 老板即兴接梗",
+          "status": "succeeded",
+          "elapsed_time": 3.36069
+        },
+        {
+          "node_id": "narration",
+          "node_type": "code",
+          "title": "核对模型结果 · 准备存档",
+          "status": "succeeded",
+          "elapsed_time": 0.033046
+        },
+        {
+          "node_id": "save",
+          "node_type": "http-request",
+          "title": "PowerContext · 写入新账",
+          "status": "succeeded",
+          "elapsed_time": 0.144524
+        },
+        {
+          "node_id": "display",
+          "node_type": "code",
+          "title": "展示结果 · 存档凭证",
+          "status": "succeeded",
+          "elapsed_time": 0.033234
+        },
+        {
+          "node_id": "answer",
+          "node_type": "answer",
+          "title": "开门迎客",
+          "status": "succeeded",
+          "elapsed_time": 0.015891
+        }
+      ]
+    },
+    {
+      "query": "送礼",
+      "user": "dify-alice-fd0a6d3c01",
+      "conversation_id": "0403e422-429c-4f83-a2f5-78b08a7055f2",
+      "workflow_run_id": "c77f7f6f-7a5a-4b83-963f-b2433ecbcc04",
+      "answer": "### 🏮 葛掌柜\n\n热茶我收下了，念你替店里干过活，也记着你把招财猫换成尖叫鸡那回。哼，这笔账先记着！\n\n**本轮结果**：送出一杯热茶：店币 -2，好感 +2，记仇 -1。\n\n🪙 11 店币 · 🌶️ 记仇 1/10 · 🍵 好感 3/10\n\n🌙 月亮现价 **7** 店币（好感 ≥4、记仇 ≤1 才能买）\n\n---\n输入：`恶作剧 你的点子` · `帮忙` · `送礼` · `道歉` · `买月亮` · `看看` · `重开`\n\n💾 第 4 笔账已保存 · 旧账已召回\n\n<details><summary>记忆存档凭证</summary>\n\nPowerContext 写入：`art_eabd5a6454664723bd6c19fc831e92f4`\n\n本轮读取：`art_7514715ae1be4782af4749a33af3782c`\n\n</details>",
+      "memory_artifacts": [
+        "art_eabd5a6454664723bd6c19fc831e92f4",
+        "art_7514715ae1be4782af4749a33af3782c"
+      ],
+      "nodes": [
+        {
+          "node_id": "start",
+          "node_type": "start",
+          "title": "进店",
+          "status": "succeeded",
+          "elapsed_time": 0.014774
+        },
+        {
+          "node_id": "input",
+          "node_type": "code",
+          "title": "识别动作 · 安全编码",
+          "status": "succeeded",
+          "elapsed_time": 0.032108
+        },
+        {
+          "node_id": "recall",
+          "node_type": "http-request",
+          "title": "PowerContext · 读取旧账",
+          "status": "succeeded",
+          "elapsed_time": 0.065378
+        },
+        {
+          "node_id": "ticket",
+          "node_type": "code",
+          "title": "核对记忆读取结果",
+          "status": "succeeded",
+          "elapsed_time": 0.035405
+        },
+        {
+          "node_id": "model",
+          "node_type": "http-request",
+          "title": "MiniMax · 老板即兴接梗",
+          "status": "succeeded",
+          "elapsed_time": 2.535878
+        },
+        {
+          "node_id": "narration",
+          "node_type": "code",
+          "title": "核对模型结果 · 准备存档",
+          "status": "succeeded",
+          "elapsed_time": 0.033179
+        },
+        {
+          "node_id": "save",
+          "node_type": "http-request",
+          "title": "PowerContext · 写入新账",
+          "status": "succeeded",
+          "elapsed_time": 0.162134
+        },
+        {
+          "node_id": "display",
+          "node_type": "code",
+          "title": "展示结果 · 存档凭证",
+          "status": "succeeded",
+          "elapsed_time": 0.033293
+        },
+        {
+          "node_id": "answer",
+          "node_type": "answer",
+          "title": "开门迎客",
+          "status": "succeeded",
+          "elapsed_time": 0.019173
+        }
+      ]
+    },
+    {
+      "query": "送礼",
+      "user": "dify-alice-fd0a6d3c01",
+      "conversation_id": "3249ef14-a82d-4734-9674-5a5f8b610821",
+      "workflow_run_id": "30e55731-a05a-4cb0-8d3d-a6ad021ed2dd",
+      "answer": "### 🏮 葛掌柜\n\n热茶收下了，礼尚往来。不过把招财猫换成尖叫鸡那笔账，我可记得清清楚楚！哼……茶钱照收。\n\n**本轮结果**：送出一杯热茶：店币 -2，好感 +2，记仇 -1。\n\n🪙 9 店币 · 🌶️ 记仇 0/10 · 🍵 好感 5/10\n\n🌙 月亮现价 **3** 店币（好感 ≥4、记仇 ≤1 才能买）\n\n---\n输入：`恶作剧 你的点子` · `帮忙` · `送礼` · `道歉` · `买月亮` · `看看` · `重开`\n\n💾 第 5 笔账已保存 · 旧账已召回\n\n<details><summary>记忆存档凭证</summary>\n\nPowerContext 写入：`art_6d7a1871b8a1490ca09d7215eee5cd34`\n\n本轮读取：`art_eabd5a6454664723bd6c19fc831e92f4`\n\n</details>",
+      "memory_artifacts": [
+        "art_6d7a1871b8a1490ca09d7215eee5cd34",
+        "art_eabd5a6454664723bd6c19fc831e92f4"
+      ],
+      "nodes": [
+        {
+          "node_id": "start",
+          "node_type": "start",
+          "title": "进店",
+          "status": "succeeded",
+          "elapsed_time": 0.011976
+        },
+        {
+          "node_id": "input",
+          "node_type": "code",
+          "title": "识别动作 · 安全编码",
+          "status": "succeeded",
+          "elapsed_time": 0.033811
+        },
+        {
+          "node_id": "recall",
+          "node_type": "http-request",
+          "title": "PowerContext · 读取旧账",
+          "status": "succeeded",
+          "elapsed_time": 0.093693
+        },
+        {
+          "node_id": "ticket",
+          "node_type": "code",
+          "title": "核对记忆读取结果",
+          "status": "succeeded",
+          "elapsed_time": 0.03338
+        },
+        {
+          "node_id": "model",
+          "node_type": "http-request",
+          "title": "MiniMax · 老板即兴接梗",
+          "status": "succeeded",
+          "elapsed_time": 3.089531
+        },
+        {
+          "node_id": "narration",
+          "node_type": "code",
+          "title": "核对模型结果 · 准备存档",
+          "status": "succeeded",
+          "elapsed_time": 0.033061
+        },
+        {
+          "node_id": "save",
+          "node_type": "http-request",
+          "title": "PowerContext · 写入新账",
+          "status": "succeeded",
+          "elapsed_time": 0.136109
+        },
+        {
+          "node_id": "display",
+          "node_type": "code",
+          "title": "展示结果 · 存档凭证",
+          "status": "succeeded",
+          "elapsed_time": 0.033087
+        },
+        {
+          "node_id": "answer",
+          "node_type": "answer",
+          "title": "开门迎客",
+          "status": "succeeded",
+          "elapsed_time": 0.017734
+        }
+      ]
+    },
+    {
+      "query": "买月亮",
+      "user": "dify-alice-fd0a6d3c01",
+      "conversation_id": "3fcd0c30-fb0c-4f77-b341-d0257592faf8",
+      "workflow_run_id": "2927227f-50f9-4462-9942-0d0b0635e422",
+      "answer": "### 🏮 葛掌柜\n\n记得！那只尖叫鸡闹了一宿，招财猫都蔫了。3店币拿走会打嗝的月亮，告别再替我办件事！\n\n**本轮结果**：支付 3 店币，买到「会打嗝的月亮」！达成「冤家熟客」结局。\n\n🪙 6 店币 · 🌶️ 记仇 0/10 · 🍵 好感 5/10 · 🌙 冤家熟客结局已解锁\n\n🌙 月亮现价 **3** 店币（好感 ≥4、记仇 ≤1 才能买）\n\n---\n输入：`恶作剧 你的点子` · `帮忙` · `送礼` · `道歉` · `买月亮` · `看看` · `重开`\n\n💾 第 6 笔账已保存 · 旧账已召回\n\n<details><summary>记忆存档凭证</summary>\n\nPowerContext 写入：`art_b2d76d8ccc784a8f992679503f25c006`\n\n本轮读取：`art_6d7a1871b8a1490ca09d7215eee5cd34`\n\n</details>",
+      "memory_artifacts": [
+        "art_b2d76d8ccc784a8f992679503f25c006",
+        "art_6d7a1871b8a1490ca09d7215eee5cd34"
+      ],
+      "nodes": [
+        {
+          "node_id": "start",
+          "node_type": "start",
+          "title": "进店",
+          "status": "succeeded",
+          "elapsed_time": 0.012263
+        },
+        {
+          "node_id": "input",
+          "node_type": "code",
+          "title": "识别动作 · 安全编码",
+          "status": "succeeded",
+          "elapsed_time": 0.03129
+        },
+        {
+          "node_id": "recall",
+          "node_type": "http-request",
+          "title": "PowerContext · 读取旧账",
+          "status": "succeeded",
+          "elapsed_time": 0.075641
+        },
+        {
+          "node_id": "ticket",
+          "node_type": "code",
+          "title": "核对记忆读取结果",
+          "status": "succeeded",
+          "elapsed_time": 0.031683
+        },
+        {
+          "node_id": "model",
+          "node_type": "http-request",
+          "title": "MiniMax · 老板即兴接梗",
+          "status": "succeeded",
+          "elapsed_time": 2.57936
+        },
+        {
+          "node_id": "narration",
+          "node_type": "code",
+          "title": "核对模型结果 · 准备存档",
+          "status": "succeeded",
+          "elapsed_time": 0.035337
+        },
+        {
+          "node_id": "save",
+          "node_type": "http-request",
+          "title": "PowerContext · 写入新账",
+          "status": "succeeded",
+          "elapsed_time": 0.149449
+        },
+        {
+          "node_id": "display",
+          "node_type": "code",
+          "title": "展示结果 · 存档凭证",
+          "status": "succeeded",
+          "elapsed_time": 0.032132
+        },
+        {
+          "node_id": "answer",
+          "node_type": "answer",
+          "title": "开门迎客",
+          "status": "succeeded",
+          "elapsed_time": 0.016079
+        }
+      ]
+    },
+    {
+      "query": "看看",
+      "user": "dify-bob-fd0a6d3c01",
+      "conversation_id": "e39e8af7-8d27-4ceb-a2d1-92e1df715751",
+      "workflow_run_id": "e7f46e2e-b26c-46e1-ad64-43e049be2f6e",
+      "answer": "### 🏮 葛掌柜\n\n葛掌柜把旧账本往柜台上一摊：“看吧，眼下干干净净。想玩恶作剧尽管来，我可记着呢！”\n\n**本轮结果**：老板翻开旧账本迎客。试试恶作剧，再开新会话回来看看。\n\n🪙 10 店币 · 🌶️ 记仇 0/10 · 🍵 好感 0/10\n\n🌙 月亮现价 **8** 店币（好感 ≥4、记仇 ≤1 才能买）\n\n---\n输入：`恶作剧 你的点子` · `帮忙` · `送礼` · `道歉` · `买月亮` · `看看` · `重开`\n\n💾 第 1 笔账已保存 · 首次进店\n\n<details><summary>记忆存档凭证</summary>\n\nPowerContext 写入：`art_23f1e736b6c8454886d4c20794f56f7a`\n\n本轮读取：`无`\n\n</details>",
+      "memory_artifacts": [
+        "art_23f1e736b6c8454886d4c20794f56f7a"
+      ],
+      "nodes": [
+        {
+          "node_id": "start",
+          "node_type": "start",
+          "title": "进店",
+          "status": "succeeded",
+          "elapsed_time": 0.013096
+        },
+        {
+          "node_id": "input",
+          "node_type": "code",
+          "title": "识别动作 · 安全编码",
+          "status": "succeeded",
+          "elapsed_time": 0.031605
+        },
+        {
+          "node_id": "recall",
+          "node_type": "http-request",
+          "title": "PowerContext · 读取旧账",
+          "status": "succeeded",
+          "elapsed_time": 0.102487
+        },
+        {
+          "node_id": "ticket",
+          "node_type": "code",
+          "title": "核对记忆读取结果",
+          "status": "succeeded",
+          "elapsed_time": 0.031903
+        },
+        {
+          "node_id": "model",
+          "node_type": "http-request",
+          "title": "MiniMax · 老板即兴接梗",
+          "status": "succeeded",
+          "elapsed_time": 2.930506
+        },
+        {
+          "node_id": "narration",
+          "node_type": "code",
+          "title": "核对模型结果 · 准备存档",
+          "status": "succeeded",
+          "elapsed_time": 0.034179
+        },
+        {
+          "node_id": "save",
+          "node_type": "http-request",
+          "title": "PowerContext · 写入新账",
+          "status": "succeeded",
+          "elapsed_time": 0.158706
+        },
+        {
+          "node_id": "display",
+          "node_type": "code",
+          "title": "展示结果 · 存档凭证",
+          "status": "succeeded",
+          "elapsed_time": 0.034345
+        },
+        {
+          "node_id": "answer",
+          "node_type": "answer",
+          "title": "开门迎客",
+          "status": "succeeded",
+          "elapsed_time": 0.016971
+        }
+      ]
+    },
+    {
+      "query": "重开",
+      "user": "dify-alice-fd0a6d3c01",
+      "conversation_id": "57cbef4b-5726-4866-8924-b327564b3e84",
+      "workflow_run_id": "6c021265-b4dc-4fc5-a06b-c62c2294847f",
+      "answer": "### 🏮 葛掌柜\n\n新账本开张！旧账留档：招财猫曾被你换成尖叫鸡，本局从零算。想买月亮？先报数量，葛掌柜可不赊账。\n\n**本轮结果**：新账本已开张，旧账本保留作审计，不再影响本局。\n\n🪙 10 店币 · 🌶️ 记仇 0/10 · 🍵 好感 0/10\n\n🌙 月亮现价 **8** 店币（好感 ≥4、记仇 ≤1 才能买）\n\n---\n输入：`恶作剧 你的点子` · `帮忙` · `送礼` · `道歉` · `买月亮` · `看看` · `重开`\n\n💾 第 7 笔账已保存 · 旧账已召回\n\n<details><summary>记忆存档凭证</summary>\n\nPowerContext 写入：`art_8396ea02e6244f69bad5b8b3409349c5`\n\n本轮读取：`art_b2d76d8ccc784a8f992679503f25c006`\n\n</details>",
+      "memory_artifacts": [
+        "art_8396ea02e6244f69bad5b8b3409349c5",
+        "art_b2d76d8ccc784a8f992679503f25c006"
+      ],
+      "nodes": [
+        {
+          "node_id": "start",
+          "node_type": "start",
+          "title": "进店",
+          "status": "succeeded",
+          "elapsed_time": 0.013093
+        },
+        {
+          "node_id": "input",
+          "node_type": "code",
+          "title": "识别动作 · 安全编码",
+          "status": "succeeded",
+          "elapsed_time": 0.031246
+        },
+        {
+          "node_id": "recall",
+          "node_type": "http-request",
+          "title": "PowerContext · 读取旧账",
+          "status": "succeeded",
+          "elapsed_time": 0.07367
+        },
+        {
+          "node_id": "ticket",
+          "node_type": "code",
+          "title": "核对记忆读取结果",
+          "status": "succeeded",
+          "elapsed_time": 0.0335
+        },
+        {
+          "node_id": "model",
+          "node_type": "http-request",
+          "title": "MiniMax · 老板即兴接梗",
+          "status": "succeeded",
+          "elapsed_time": 4.937008
+        },
+        {
+          "node_id": "narration",
+          "node_type": "code",
+          "title": "核对模型结果 · 准备存档",
+          "status": "succeeded",
+          "elapsed_time": 0.0357
+        },
+        {
+          "node_id": "save",
+          "node_type": "http-request",
+          "title": "PowerContext · 写入新账",
+          "status": "succeeded",
+          "elapsed_time": 0.050517
+        },
+        {
+          "node_id": "display",
+          "node_type": "code",
+          "title": "展示结果 · 存档凭证",
+          "status": "succeeded",
+          "elapsed_time": 0.033525
+        },
+        {
+          "node_id": "answer",
+          "node_type": "answer",
+          "title": "开门迎客",
+          "status": "succeeded",
+          "elapsed_time": 0.018095
+        }
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "name": "Dify completed all nine nodes: 恶作剧 把招财猫换成尖叫鸡",
+      "passed": true
+    },
+    {
+      "name": "prank changes game state",
+      "passed": true
+    },
+    {
+      "name": "Dify completed all nine nodes: 看看 老板你还记得我吗？",
+      "passed": true
+    },
+    {
+      "name": "distinct conversations",
+      "passed": true
+    },
+    {
+      "name": "cross-conversation recall uses previous memory",
+      "passed": true
+    },
+    {
+      "name": "AI recalls the specific prank",
+      "passed": true
+    },
+    {
+      "name": "Dify completed all nine nodes: 帮忙",
+      "passed": true
+    },
+    {
+      "name": "Dify completed all nine nodes: 送礼",
+      "passed": true
+    },
+    {
+      "name": "Dify completed all nine nodes: 送礼",
+      "passed": true
+    },
+    {
+      "name": "Dify completed all nine nodes: 买月亮",
+      "passed": true
+    },
+    {
+      "name": "complete playable ending",
+      "passed": true
+    },
+    {
+      "name": "Dify completed all nine nodes: 看看",
+      "passed": true
+    },
+    {
+      "name": "Dify users have separate ledgers",
+      "passed": true
+    },
+    {
+      "name": "Dify completed all nine nodes: 重开",
+      "passed": true
+    },
+    {
+      "name": "reset restores initial game",
+      "passed": true
+    },
+    {
+      "name": "every turn persists real memory",
+      "passed": true
+    }
+  ],
+  "completed": true
+}

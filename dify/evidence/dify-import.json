@@ -1,0 +1,10 @@
+{
+  "dify_version": "1.9.1",
+  "dsl_version": "0.4.0",
+  "status": "completed",
+  "app_id": "7a662488-9842-4387-8f25-432c450c0373",
+  "chat_url": "http://127.0.0.1:18080/chat/WLLLG5ujgxYuTTwv",
+  "node_count": 9,
+  "dependencies": [],
+  "published": true
+}

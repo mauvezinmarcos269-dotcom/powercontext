@@ -1,0 +1,79 @@
+{
+  "recorded_at": "2026-10-30T20:32:45.839839+08:00",
+  "platform": "Windows 11",
+  "python": "3.13.5 | packaged by Anaconda, Inc. | (main, Jun 12 2025, 16:37:03) [MSC v.1929 64 bit (AMD64)]",
+  "dependencies": {
+    "powercontext": "1.4.1",
+    "fastapi": "0.162.0",
+    "uvicorn": "0.54.0",
+    "httpx": "0.28.1",
+    "pydantic": "2.14.2",
+    "PyYAML": "6.0.3"
+  },
+  "images": [
+    {
+      "tags": [
+        "langgenius/dify-api:1.9.1"
+      ],
+      "digests": [
+        "langgenius/dify-api@sha256:c38936ee0149f8fabfb5f02ac716c545aa758ceef78c2369c733a86f8713aad4"
+      ]
+    },
+    {
+      "tags": [
+        "langgenius/dify-web:1.9.1"
+      ],
+      "digests": [
+        "langgenius/dify-web@sha256:53af9883e89e96eac6885a9519c5230d89ba112855d6f98b0d907656e02ead81"
+      ]
+    },
+    {
+      "tags": [
+        "langgenius/dify-sandbox:0.2.12"
+      ],
+      "digests": [
+        "langgenius/dify-sandbox@sha256:4e65e8a351a2b17d11750b65403527a347e5cb938bc2271521ca7d689c008ad3"
+      ]
+    },
+    {
+      "tags": [
+        "langgenius/dify-plugin-daemon:0.3.0-local"
+      ],
+      "digests": [
+        "langgenius/dify-plugin-daemon@sha256:22fb3bed3803b094b779a1db2684797e2feeae339f9612273fec7db14ecd03cd"
+      ]
+    },
+    {
+      "tags": [
+        "postgres:15-alpine"
+      ],
+      "digests": [
+        "postgres@sha256:54e0dd8e8cddcdbb9156c2486eed5a43eccb7214d7c6828097d41ce049fb3984"
+      ]
+    },
+    {
+      "tags": [
+        "redis:6-alpine"
+      ],
+      "digests": [
+        "redis@sha256:63d5174750e285bc3069c4519c53c8b6de6ebe70715140a6c9d21d6f04b77319"
+      ]
+    },
+    {
+      "tags": [
+        "ubuntu/squid:latest"
+      ],
+      "digests": [
+        "ubuntu/squid@sha256:6a097f68bae708cedbabd6188d68c7e2e7a38cedd05a176e1cc0ba29e3bbe029"
+      ]
+    },
+    {
+      "tags": [
+        "nginx:latest"
+      ],
+      "digests": [
+        "nginx@sha256:600f7cd45e27aa13e9304c834ab7c1b0ff39df85ee1dcc5087955455d77bc83b"
+      ]
+    }
+  ]
+}
