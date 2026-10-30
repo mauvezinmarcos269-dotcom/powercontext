@@ -53,6 +53,7 @@ _OPAQUE_TYPES = frozenset({
     "video",
     "redacted_thinking",
     "item_reference",
+    "image_generation_call",
 })
 _CONTENT_FIELDS = frozenset({
     "messages",
@@ -201,6 +202,15 @@ def contains_opaque_content(value: object, *, protocol: PrivacyProtocol | None =
     """
 
     if isinstance(value, dict):
+        # This built-in Responses tool produces opaque images, including when
+        # its completed output is replayed as an input item.
+        tools = value.get("tools")
+        if (
+            protocol == "openai-responses"
+            and isinstance(tools, list)
+            and any(isinstance(tool, dict) and tool.get("type") == "image_generation" for tool in tools)
+        ):
+            return True
         # Responses ItemReference permits an omitted or null discriminator.
         # Restrict this check to root input items; IDs in schemas/tool data are text.
         inputs = value.get("input")
