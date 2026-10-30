@@ -66,7 +66,11 @@ class WorkerHandler(BaseHTTPRequestHandler):
             output = {
                 "action": "create",
                 "compared_ids": [item["item_id"] for item in task["related"]],
-                "content": {"kind": task["proposal"]["kind"], "text": task["proposal"]["text"]},
+                "content": {
+                    "kind": task["proposal"]["kind"],
+                    "text": task["proposal"]["text"],
+                    "description": task["proposal"]["description"],
+                },
                 "evidence_ids": task["proposal"]["evidence_ids"],
                 "reason": "Retain the synthetic preference with Source evidence.",
             }
@@ -76,6 +80,7 @@ class WorkerHandler(BaseHTTPRequestHandler):
                     {
                         "kind": "preference",
                         "text": _MEMORY,
+                        "description": "Synthetic user preference.",
                         "evidence_ids": [item["evidence_id"] for item in task["evidence"]],
                     }
                 ]
