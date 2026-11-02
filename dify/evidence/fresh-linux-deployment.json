@@ -1,0 +1,93 @@
+{
+  "recorded_at": "2026-11-02T19:26:00.845150+08:00",
+  "project": "grudge-dify-review-v2",
+  "initial_conditions": "New project, new named volumes, no prior users, no prior Dify account, new generated application credentials",
+  "component_environment": {
+    "system": "Linux",
+    "python": "3.12.13 (main, Jun 24 2026, 02:08:01) [GCC 14.2.0]",
+    "dependencies": {
+      "powercontext": "1.4.1",
+      "fastapi": "0.162.0",
+      "uvicorn": "0.54.0",
+      "httpx": "0.28.1",
+      "pydantic": "2.14.2",
+      "PyYAML": "6.0.3"
+    }
+  },
+  "services": [
+    {
+      "Service": "api",
+      "State": "running",
+      "Health": "",
+      "Image": "langgenius/dify-api:1.9.1"
+    },
+    {
+      "Service": "db",
+      "State": "running",
+      "Health": "healthy",
+      "Image": "postgres:15-alpine"
+    },
+    {
+      "Service": "memory",
+      "State": "running",
+      "Health": "healthy",
+      "Image": "grudge-dify-review-v2-shop:1"
+    },
+    {
+      "Service": "nginx",
+      "State": "running",
+      "Health": "",
+      "Image": "nginx:latest"
+    },
+    {
+      "Service": "plugin_daemon",
+      "State": "running",
+      "Health": "",
+      "Image": "langgenius/dify-plugin-daemon:0.3.0-local"
+    },
+    {
+      "Service": "redis",
+      "State": "running",
+      "Health": "healthy",
+      "Image": "redis:6-alpine"
+    },
+    {
+      "Service": "sandbox",
+      "State": "running",
+      "Health": "healthy",
+      "Image": "langgenius/dify-sandbox:0.2.12"
+    },
+    {
+      "Service": "shop",
+      "State": "running",
+      "Health": "healthy",
+      "Image": "grudge-dify-review-v2-shop:1"
+    },
+    {
+      "Service": "ssrf_proxy",
+      "State": "running",
+      "Health": "",
+      "Image": "ubuntu/squid:latest"
+    },
+    {
+      "Service": "web",
+      "State": "running",
+      "Health": "",
+      "Image": "langgenius/dify-web:1.9.1"
+    },
+    {
+      "Service": "worker",
+      "State": "running",
+      "Health": "",
+      "Image": "langgenius/dify-api:1.9.1"
+    }
+  ],
+  "backend_url_from_dify": "http://shop:8012",
+  "powercontext_url_from_backend": "http://memory:8011",
+  "powercontext_bearer_auth": true,
+  "dify_checks": 16,
+  "successful_nodes": 72,
+  "container_recreation_passed": true,
+  "readiness_regression": "Actual HTTP endpoint returned 503 twice then 200; wait succeeded on request 3",
+  "official_platform_result": "Not yet retested; failMsg=4 root cause remains unknown"
+}

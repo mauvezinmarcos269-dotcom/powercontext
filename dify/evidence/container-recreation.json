@@ -1,0 +1,30 @@
+{
+  "project": "grudge-dify-review-v2",
+  "before_container_ids": [
+    "53d4af03b0b6722d62a6bcaaf05cc6f1ecc089bb4db3d3544ae773013d2da174",
+    "720a604860c8b354ba2e2b237e584d938564218a671e3e0d86d45e67ba72f3ed"
+  ],
+  "after_container_ids": [
+    "2816a783f6f65d28008cfde3aac1a44496ca0703576d4659b5ebb2e4e641b0a3",
+    "61d8bbbc2462690daf3baabdcefc80065b0fdc598ba7bdf59b69b30d93b8d8cc"
+  ],
+  "before": {
+    "query": "恶作剧 把招财猫换成尖叫鸡",
+    "answer": "### 🏮 葛掌柜\n\n“把招财猫换成尖叫鸡？行，店币掉了1枚，记仇加2，月亮还涨价。葛掌柜不做赔本买卖！”\n\n**本轮结果**：恶作剧成功！掉出 1 店币；老板记仇 +2，月亮涨价了。\n\n🪙 11 店币 · 🌶️ 记仇 2/10 · 🍵 好感 0/10\n\n🌙 月亮现价 **12** 店币（好感 ≥4、记仇 ≤1 才能买）\n\n---\n输入：`恶作剧 你的点子` · `帮忙` · `送礼` · `道歉` · `买月亮` · `看看` · `重开`\n\n💾 第 1 笔账已保存 · 首次进店\n\n<details><summary>记忆存档凭证</summary>\n\nPowerContext 写入：`art_92e962c7daa041d6be6853a7b96c12b2`\n\n本轮读取：`无`\n\n</details>",
+    "conversation_id": "18ba50a5-cdc7-41ef-8634-89b377eee74b",
+    "memory_artifacts": [
+      "art_92e962c7daa041d6be6853a7b96c12b2"
+    ]
+  },
+  "after": {
+    "query": "看看 老板你还记得我吗？",
+    "answer": "### 🏮 葛掌柜\n\n当然记得！就是你把招财猫换成尖叫鸡，害我一开门差点把货扔出去。账本可没忘，哼，想混熟？先说怎么赔！\n\n**本轮结果**：老板翻开旧账本迎客。试试恶作剧，再开新会话回来看看。\n\n🪙 11 店币 · 🌶️ 记仇 2/10 · 🍵 好感 0/10\n\n🌙 月亮现价 **12** 店币（好感 ≥4、记仇 ≤1 才能买）\n\n---\n输入：`恶作剧 你的点子` · `帮忙` · `送礼` · `道歉` · `买月亮` · `看看` · `重开`\n\n💾 第 2 笔账已保存 · 旧账已召回\n\n<details><summary>记忆存档凭证</summary>\n\nPowerContext 写入：`art_06ee939b699249c293699732009e7ee0`\n\n本轮读取：`art_92e962c7daa041d6be6853a7b96c12b2`\n\n</details>",
+    "conversation_id": "73efc8ef-7312-4eda-898c-1e2fe670928c",
+    "memory_artifacts": [
+      "art_06ee939b699249c293699732009e7ee0",
+      "art_92e962c7daa041d6be6853a7b96c12b2"
+    ]
+  },
+  "passed": true,
+  "verification": "Both application containers recreated; distinct Dify conversations reuse the exact saved PowerContext artifact"
+}

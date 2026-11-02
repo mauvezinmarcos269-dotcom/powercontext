@@ -143,6 +143,14 @@ async def health():
     return {"service": "grudge-shop", "model_configured": bool(os.getenv("MINIMAX_API_KEY"))}
 
 
+@app.get("/ready")
+async def ready():
+    if not os.getenv("MINIMAX_API_KEY"):
+        raise HTTPException(503, "Model API key not configured")
+    await pc("GET", "/v1/server-info")
+    return {"ready": True, "memory": "powercontext"}
+
+
 @app.post("/turn/prepare", dependencies=[Depends(auth)])
 async def prepare(req: Prepare):
     if req.action not in ACTIONS:

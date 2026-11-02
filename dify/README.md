@@ -31,8 +31,11 @@ flowchart LR
 | `scripts/deploy_dify.py` | 获取固定版本官方源码并部署独立本机 Dify |
 | `scripts/import_dify.py` | 初始化本作品的独立 Dify、绑定本地凭据、导入并发布 |
 | `scripts/run_service.py` | 启动 PowerContext 或杂货铺，支持读取已有模型配置 |
+| `deploy/Dockerfile` | 固定依赖的 Linux PowerContext / 杂货铺镜像，不包含本地凭据 |
+| `scripts/readiness.py` | 有界就绪等待，避免首次启动早于数据库迁移与服务就绪 |
 | `samples/verify_bridge.py` | 后端真实服务验证 |
 | `samples/verify_dify.py` | 经已发布 Dify API 执行完整玩法和跨会话验证 |
+| `samples/verify_container_restart.py` | 重建真实 PowerContext 与杂货铺容器，核对持久化与新会话召回 |
 | `samples/SCENARIO.md` | 评审可手动执行的样例 |
 | `evidence/` | 实际运行记录；不包含密钥、签名票据或管理员密码 |
 | `ACCEPTANCE.md` | 验收结论和证据索引 |
@@ -47,6 +50,40 @@ flowchart LR
 - 不需要安装第三方 Dify 插件。部署包含官方 plugin daemon 作为 Dify 基础组件，但本 DSL 无插件依赖。
 
 ## 从零启动
+
+### 推荐：在同一 Docker 网络中运行全部服务
+
+这是修复版的评审入口，适用于 Linux Docker、WSL 和 Docker Desktop。PowerContext 和杂货铺均为真实 Linux 服务，使用独立具名卷保存数据；Dify 通过 `http://shop:8012` 访问后端，后端通过 `http://memory:8011` 访问 PowerContext，无需临时隧道或宿主机回环地址。
+
+从仓库根目录进入 `dify/`，安装本文的 Python 依赖后执行：
+
+```powershell
+python scripts/init_env.py
+# 在生成的 .env 中补充 MINIMAX_API_KEY、MINIMAX_MODEL、MINIMAX_CHAT_URL
+python scripts/deploy_dify.py --with-app
+python scripts/import_dify.py --shop-base-url http://shop:8012
+python samples/verify_dify.py
+```
+
+`python` 应为安装了 `requirements.txt` 的环境解释器。模型凭据由评审提供；也可添加 `--model-env /absolute/path/private.env` 从自己的文件中读取已有配置。脚本在启动前检查必要配置，凭据仅写入被忽略的运行目录，Docker 构建上下文排除所有 `.env` 与 `.runtime`。
+
+部署会等待 PowerContext、后端就绪及 Dify 数据库迁移完成，导入脚本也会等待 `/console/api/setup` 就绪。PowerContext 使用独立随机 Bearer token，后端和健康检查使用同一 token；没有关闭 PowerContext 的非回环认证要求。新建实例会自动初始化、导入并发布；不需要先运行下方两个宿主机服务终端。应用链接由导入脚本输出。
+
+完整容器方式验收使用 `verify_dify.py`。`verify_bridge.py` 和宿主机重启脚本用于下方的宿主机手动方式。容器模式可额外运行 `python samples/verify_container_restart.py --project grudge-dify`，它会重建所选项目的两个应用容器并保留数据卷，不会重建其他项目。
+
+已有旧部署时，请使用独立项目名和端口，避免复用旧数据库及凭据：
+
+```powershell
+python scripts/deploy_dify.py --with-app --project grudge-dify-review --port 18081
+python scripts/import_dify.py --base-url http://127.0.0.1:18081 --shop-base-url http://shop:8012
+python samples/verify_dify.py
+```
+
+同一工作目录的 `.runtime/dify-access.json` 绑定一个 Dify 实例；切换实例时应使用独立工作目录，避免将旧实例登录信息应用到另一实例。不要删除或覆盖原实例凭据来“修复”初始化。
+
+下面为宿主机手动运行方式；两种方式选择一种即可。
+
+### 宿主机手动运行
 
 以下命令从仓库根目录进入 `dify/`，后续保持该工作目录。Windows PowerShell：
 
@@ -128,7 +165,7 @@ MINIMAX_MODEL=YOUR_ENABLED_MODEL_NAME
 4. 杂货铺 → MiniMax：HTTPS 出网；默认不读取系统代理，网络须能直接访问配置的模型 URL。
 5. 初次部署须能访问 GitHub、Docker Hub、Python 包源。
 
-Linux Docker 若不能解析 `host.docker.internal`，在 `.runtime/dify/docker-compose.yaml` 的 `ssrf_proxy` 服务增加 `extra_hosts: ["host.docker.internal:host-gateway"]`，确保宿主机防火墙允许容器访问 `8012`，再重建代理容器。
+宿主机手动方式现已自动为 HTTP 代理设置 `host.docker.internal:host-gateway`，Linux 仍需确保宿主机防火墙允许容器访问 `8012`。推荐的 `--with-app` 方式使用容器服务名，不依赖此地址。
 
 ## 玩法与完整验证
 
@@ -163,6 +200,7 @@ Linux Docker 若不能解析 `host.docker.internal`，在 `.runtime/dify/docker-
 - 单进程演示后端采用内存锁，不支持多实例同时写同一玩家。历史快照逐条保留，读取会遍历分页；大规模使用需增加生命周期管理。
 - AI 即兴台词没有唯一答案，数值和存档凭证才是确定的规则结果。模型可能偶尔接梗不佳或省略细节；验证脚本会明确报告未满足的叙述断言，不伪造证据。
 - 停止：在两个 Python 终端按 Ctrl+C；Dify 在 `.runtime/dify/` 执行 `docker compose -p grudge-dify down`。不加 `-v` 可保留数据。
+- 推荐的完整容器方式无需两个 Python 服务终端；仍在对应部署目录执行 `docker compose -p <项目名> down`。独立项目部署目录为 `.runtime/<项目名>/`，默认项目仍为 `.runtime/dify/`。
 
 ## 来源
 

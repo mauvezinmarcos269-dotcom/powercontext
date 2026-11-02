@@ -9,6 +9,7 @@ from pathlib import Path
 import secrets
 import httpx
 import yaml
+from readiness import wait_json
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -16,10 +17,15 @@ ROOT = Path(__file__).resolve().parents[1]
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--base-url", default="http://127.0.0.1:18080")
+    p.add_argument("--shop-base-url", help="For --with-app use http://shop:8012")
+    p.add_argument("--wait-timeout", type=int, default=240)
     args = p.parse_args()
     base = args.base_url.rstrip("/")
     path = ROOT / ".runtime/dify-access.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
     credentials = json.loads(path.read_text(encoding="utf-8")) if path.exists() else None
+    if credentials and credentials.get("base_url", base) != base:
+        raise SystemExit("Local access settings belong to another Dify URL. Use an independent checkout/runtime; existing credentials are preserved")
     client = httpx.Client(base_url=base + "/console/api", timeout=120, trust_env=False)
 
     def call(method, route, **kwargs):
@@ -33,10 +39,11 @@ def main():
             raise RuntimeError(f"Dify {method} {route}: HTTP {r.status_code}: {message}")
         return r.json()
 
-    status = call("GET", "/setup")
+    status = wait_json(base + "/console/api/setup", args.wait_timeout,
+        lambda data: data.get("step") in ("finished", "not_started"))
     if status["step"] == "not_started":
         if credentials is None:
-            credentials = {"email": "judge@grudge-shop.local", "password": "Shop9" + secrets.token_urlsafe(24)}
+            credentials = {"email": "judge@grudge-shop.local", "password": "Shop9" + secrets.token_urlsafe(24), "base_url": base}
             path.write_text(json.dumps(credentials, indent=2), encoding="utf-8")
         call("POST", "/setup", json={"email": credentials["email"], "name": "Grudge Shop", "password": credentials["password"]})
         print("Initialized independent local Dify instance")
@@ -49,6 +56,8 @@ def main():
     for variable in doc["workflow"]["environment_variables"]:
         if variable["name"] == "SHOP_API_KEY":
             variable["value"] = env["SHOP_API_KEY"]
+        elif variable["name"] == "SHOP_BASE_URL" and args.shop_base_url:
+            variable["value"] = args.shop_base_url.rstrip("/")
     body = {"mode": "yaml-content", "yaml_content": yaml.safe_dump(doc, allow_unicode=True), "name": "记仇杂货铺"}
     if credentials.get("app_id"):
         body["app_id"] = credentials["app_id"]
